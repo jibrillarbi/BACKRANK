@@ -76,6 +76,8 @@ def ATR(High,Low,Close,n):
 
 def SMA(values,n):
     return pd.Series(values).rolling(n).mean()
+def VMA(volume,n):
+    return pd.Series(volume.rolling(n).mean())
 def EMA(values,n):
     s=pd.Series(values,dtype=float)
     s.iloc[n-1]=s.iloc[:n].mean() # First EMA calculation n-1 because prices are indexed 
