@@ -28,8 +28,7 @@ import pandas as pd
 from backtesting import Strategy, Backtest
 from backtesting.lib import crossover
 from backtesting.test import GOOG
-def SMA(values,n):
-    return pd.Series(values).rolling(n).mean()
+
 
 
 def RSI(values,n):
@@ -62,6 +61,31 @@ def RSI(values,n):
     print(rsi)
     print(avg_g,avg_l)
 
+def ATR(High,Low,Close,n):
+    
+    tr=pd.Series(index=range(len(Close)))
+    tr[0]=High[0]-Low[0]
+    for i in range(1,len(Close)):#True range
+        tr[i]=max(High[i]-Low[i], abs(High[i]-Close[i-1])  ,abs(Low[i]-Close[i-1])) 
+    print(tr)
+    atr=pd.Series(index=range(len(tr)))
+    atr.iloc[n-1]=tr.iloc[:n].mean()
+    for i in range(n,len(atr)):
+        atr.iloc[i]=(  (atr.iloc[i-1]) * (n-1)   +  tr.iloc[i]  )/n
+    print(atr)
+
+def SMA(values,n):
+    return pd.Series(values).rolling(n).mean()
+def EMA(values,n):
+    s=pd.Series(values,dtype=float)
+    s.iloc[n-1]=s.iloc[:n].mean() # First EMA calculation n-1 because prices are indexed 
+    print(s.iloc[n-1])
+    a=2/(n+1)
+    print(a,s.iloc[n])
+    for i in range(n, len(s)):
+        print(i)
+        s.iloc[i]=a*s.iloc[i]+(1-a)*s.iloc[i-1]
+    print(s)
 
 class SmaCross(Strategy):
     # Define the two MA lags as *class variables*
@@ -73,7 +97,6 @@ class SmaCross(Strategy):
         # Precompute the two moving averages
         self.sma1 = self.I(SMA, self.data.Close, self.n1) # uses earlier method 
         self.sma2 = self.I(SMA, self.data.Close, self.n2) # uses SMA earlier method
-    
     def next(self):
         # If sma1 crosses above sma2, close any existing
         # short trades, and buy the asset
@@ -89,7 +112,14 @@ class SmaCross(Strategy):
             self.position.close()
             self.sell()
 
-s = pd.Series(
-    [44.34, 44.09, 44.15, 43.61, 44.33, 44.83, 45.10, 45.42, 45.84, 46.08, 45.89, 46.03, 45.61, 46.28, 46.28, 46.00, 46.03, 46.41, 46.22, 45.64, 46.21, 46.25, 45.71, 46.45, 45.78, 45.35, 44.03, 44.18, 44.22, 44.57, 43.42, 42.66, 43.13])
+prices = [100, 102, 101, 104, 103, 105, 107, 106, 108, 110]
 
-RSI(s,14)
+high =  [48, 50, 52, 51, 53, 54, 55]
+low  =  [45, 47, 49, 48, 50, 52, 53]
+close = [46, 49, 50, 50, 52, 53, 54]
+ATR(high,low,close,3)
+'''
+bt= Backtest(GOOG,SmaCross,cash=10_000,commission=.002, finalize_trades=True)
+stats=bt.run()
+print(stats)
+'''
