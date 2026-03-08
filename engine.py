@@ -149,10 +149,10 @@ json_string = '''{
 
 '''
 rules=json.loads(json_string)
-def json_parser(json): 
+def json_parser(json, rule_key="entryRule"):
     entry=[]
     indicators=[]
-    for i in rules["entryRule"]["expression"]:
+    for i in rules[rule_key]["expression"]:
         if "logic" not in i: #not logic part, can convert to Condition
             left=Indicator(i['left']['indicator'],i['left'].get('period'))
             operator=i['operator']
@@ -339,13 +339,21 @@ data = {
     'Volume': [10000, 10000, 10000, 10000, 10000, 12000, 15000, 25000, 20000, 18000, 15000, 12000, 10000, 10000, 10000]
 }
 df = pd.DataFrame(data)
-entry = json_parser(rules)[0]
-indicators = json_parser(rules)[1]
-df_n=compute_indicators(df,indicators)
+entry,entry_inds = json_parser(rules, "entryRule")
+exit, exit_inds  = json_parser(rules, "exitRule")
 
-entry_signal = eval_expression(df_n, entry)
+df_entry = compute_indicators(df, entry_inds)
+df_exit = compute_indicators(df, exit_inds)
+
+entry_signal = eval_expression(df_entry, entry)
+exit_signal  = eval_expression(df_exit, exit)
 print(entry_signal)
+print(exit_signal)
 '''
+entry and exit could be combined
+true from entry we switch to exit 
+
+
 bt= Backtest(GOOG,SmaCross,cash=10_000,commission=.002, finalize_trades=True)
 stats=bt.run()
 print(stats)
