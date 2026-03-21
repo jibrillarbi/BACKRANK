@@ -5,7 +5,7 @@ from evaluator import eval_logic
 
 
 class Strategy: 
-    def __init__(self,name,entry_signal,exit_signal,position_type,stop_loss=None,take_profit=None,max_days=None, timeframe='1D'):
+    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=None,take_profit=None,max_days=None, timeframe='1D'):
         self.name=name # Strategy name 
         self.entry_signals = entry_signal # df with true / false
         self.exit_signals = exit_signal #df with true / false
@@ -14,13 +14,14 @@ class Strategy:
         self.position_type = position_type #LONG or SHORT
         self.max_days=max_days # max holding days
         self.timeframe=timeframe # timeframe
+        self.pct=pct
         #self.size_pct = size_pct # percentage of equity used for each trade
 
 class Position(): 
-    def __init__(self,entry_type,entry_price,entry_time,position,stop_loss=None,take_profit=None):
+    def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=None,take_profit=None):
         self.entry_type=entry_type
         self.entry_price=entry_price
-        self.position=position
+        self.lot_size=lot_size
         self.exit_price=None
         self.entry_time=entry_time
         self.exit_time=None
@@ -29,6 +30,7 @@ class Position():
         self.stop_loss_price=self.stop_loss_calc()
         self.take_profit_price=self.take_profit_calc()
         self.open=True
+        self.pnl=0
         
     def stop_loss_calc(self):
         if self.stop_loss is not None: 
@@ -72,7 +74,24 @@ class Position():
         else:
             raise SyntaxError(
             f"Error when calculating tp_trigered, expected LONG or SHORT, got {self.entry_type})")
-
+    def get_pnl(self): 
+        if self.open==True:
+            raise SyntaxError(
+            f"position is still open")
+        if self.exit_price is None: 
+            raise SyntaxError(
+            f"Exit price not defined")
+        if self.entry_type=='LONG':
+            self.pnl=self.lot_size*(self.exit_price-self.entry_price)
+            return self.pnl
+            
+        elif self.entry_type=='SHORT':
+            self.pnl=self.lot_size*(self.entry_price-self.exit_price)
+            return self.pnl
+        else: 
+            raise SyntaxError(
+            f"when calculating get_pnl expected LONG or SHORT, got {self.entry_type})")
+        
 
 
 class Backtester:
@@ -90,7 +109,7 @@ class Backtester:
                 if self.strategy.entry_signals.iloc[i]: #check if we should open position
                     self.position=Position(entry_type=self.strategy.position_type,
                                            entry_price=self.feed["Open"].iloc[i+1],
-                                           
+                                           lot_size=(self.capital*self.strategy.pct)/self.feed["Open"].iloc[i+1],
                                            entry_time=i+1,
                                            stop_loss=self.strategy.stop_loss,
                                            take_profit=self.strategy.take_profit)
@@ -100,9 +119,22 @@ class Backtester:
                 if self.strategy.exit_signals.iloc[i]: # exit triggered
                     self.position.exit_price=self.feed["Open"].iloc[i+1] # exit price
                     self.position.exit_time=i+1 # exit time
+                    self.position.open=False
+                    self.capital+=self.position.get_pnl()
                     self.positions.append(self.position) # we add the position to the position list
                     self.position=None # we reset position, as we closed
-                    
+        if self.position is not None: #we still have an open position 
+            self.position.exit_price=self.feed["Close"].iloc[-1] # last close price
+            self.position.exit_time=self.size
+            self.position.open=False
+            self.capital+=self.position.get_pnl()
+            self.positions.append(self.position) # we add the position to the position list
+            self.position=None # we reset position, as we closed
+    def stats(self):
+        total_pnl=0
+        for position in self.positions:
+            total_pnl+=position.pnl
+        print('Final Capital: '+str(self.capital)+ ' \nTotal PNL: '+ str(total_pnl))
             
 data = {
     'Open':   [100.0, 98.0, 96.0, 94.0, 92.0, 91.5, 93.0, 96.0, 100.0, 102.0, 101.0, 100.0, 99.0, 98.0, 97.0],
@@ -112,9 +144,9 @@ data = {
     'Volume': [10000, 10000, 10000, 10000, 10000, 12000, 15000, 25000, 20000, 18000, 15000, 12000, 10000, 10000, 10000]
 }
 df = pd.DataFrame(data)
-entry_rule="SMA(3)+3 crossesAbove SMA(5) && RSI(2) < 95 && Volume > VMA(3)"
-exit_rule="Close < SMA(3)"
-position_type='BUY'
+entry_rule="SMA(2) > SMA(4) && Volume > VMA(3)"
+exit_rule="Close < SMA(2)"
+position_type='LONG'
 entry_ast, entry_inds = parse_rule(entry_rule)
 exit_ast, exit_inds   = parse_rule(exit_rule)
 
@@ -134,7 +166,9 @@ print(exit_signal)
 strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
                entry_signal=entry_signal,
                exit_signal=exit_signal,
-               position_type=position_type
+               position_type=position_type,
+               pct=0.02
                )
-bt=Backtester(strat,'TEST',data,10000)
+bt=Backtester(strat,'TEST',df,10000)
 bt.run()
+bt.stats()
