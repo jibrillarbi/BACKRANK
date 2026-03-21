@@ -5,32 +5,32 @@ from evaluator import eval_logic
 
 
 class Strategy: 
-    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=1,take_profit=1,max_days=None, timeframe='1D'):
+    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=None,take_profit=None, timeframe='1D'):
         self.name=name # Strategy name 
         self.entry_signals = entry_signal # df with true / false
         self.exit_signals = exit_signal #df with true / false
-        self.stop_loss = stop_loss 
-        self.take_profit = take_profit
+        self.stop_loss = stop_loss #percentage based stop loss
+        self.take_profit = take_profit #percentage based tp 
         self.position_type = position_type #LONG or SHORT
-        self.max_days=max_days # max holding days
         self.timeframe=timeframe # timeframe
         self.pct=pct#percentage of equity used for each trade
 
 class Position: 
-    def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=1,take_profit=1):
+    def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=None,take_profit=None):
         self.entry_type=entry_type #LONG or SHORT 
-        self.entry_price=entry_price
+        self.entry_price=entry_price #entry lot price
         self.lot_size=lot_size
-        self.exit_price=None
-        self.entry_time=entry_time
-        self.exit_time=None
-        self.stop_loss=stop_loss
-        self.take_profit=take_profit
-        self.stop_loss_price=self.stop_loss_calc()
-        self.take_profit_price=self.take_profit_calc()
+        self.exit_price=None # exit lot price
+        self.entry_time=entry_time # entry candle on df
+        self.exit_time=None #exit candle on df
+        self.stop_loss=stop_loss #stop loss in percentage
+        self.take_profit=take_profit #take profit in percentage
+        self.stop_loss_price=self.stop_loss_calc() # lot price of stop loss
+        self.take_profit_price=self.take_profit_calc() #lot price of take profit
         self.open=True
-        self.pnl=0
-        
+        self.pnl=0 #pnl, updated when closed
+        self.u_pnl=0 # unrealised pnl
+        self.value=self.lot_size*entry_price
     def stop_loss_calc(self):
         if self.stop_loss is not None: 
             if self.entry_type=='LONG':
@@ -41,6 +41,8 @@ class Position:
                 raise ValueError(
             f"Error when calculating stop loss, expected LONG or SHORT, got {self.entry_type})")
         return None
+    def update_value(self,price):
+        self.value=self.lot_size*price
     def take_profit_calc(self):
         if self.take_profit is not None: 
             if self.entry_type=='LONG':
@@ -51,6 +53,7 @@ class Position:
                 raise ValueError(
             f"Error when calculating take_profit, expected LONG or SHORT, got {self.entry_type})")
         return None
+    
     def sl_trigered(self,price):
         if self.stop_loss_price is None:
             raise ValueError(
@@ -62,6 +65,7 @@ class Position:
         else:
             raise ValueError(
             f"Error when calculating sl_trigered, expected LONG or SHORT, got {self.entry_type})")
+        
     def tp_trigered(self,price):
         if self.take_profit_price is None:
             raise ValueError(
@@ -73,6 +77,22 @@ class Position:
         else:
             raise ValueError(
             f"Error when calculating tp_trigered, expected LONG or SHORT, got {self.entry_type})")
+    def update_u_pnl(self,price):
+        #function that updates unrealized pnl based on price at a given time 
+        if self.open==False:
+            raise RuntimeError(
+            f"position is closed")
+        if price is None: 
+            raise ValueError(
+            f"Exit price not defined")
+        if self.entry_type=='LONG':
+            self.u_pnl=self.lot_size*(price-self.entry_price)
+            
+        elif self.entry_type=='SHORT':
+            self.u_pnl=self.lot_size*(self.entry_price-price)
+        else: 
+            raise ValueError(
+            f"when calculating get_pnl expected LONG or SHORT, got {self.entry_type})")
     def get_pnl(self): 
         if self.open==True:
             raise RuntimeError(
@@ -88,10 +108,12 @@ class Position:
         else: 
             raise ValueError(
             f"when calculating get_pnl expected LONG or SHORT, got {self.entry_type})")
+        
     def close(self,exit_price,exit_time):
         self.exit_price=exit_price
         self.exit_time=exit_time
         self.open=False
+        self.update_value(exit_price)
         self.pnl=self.get_pnl()
 
 
@@ -100,16 +122,20 @@ class Backtester:
         self.strategy=strategy # Strategy class object
         self.symbol=symbol # symbol AAPL etc
         self.feed=feed  #symbol+timeframe, df object AAPL_1D
-        self.size=len(strategy.entry_signals) #total size of data (bars in chart)
         self.position : Position | None = None  # current open position / initialized as None 
         self.positions=[]
         self.capital=capital
+        self.equity=capital
+        
         assert len(feed) == len(strategy.entry_signals) == len(strategy.exit_signals), \
         "feed, entry_signals, and exit_signals must have same length"
         self.size=len(strategy.entry_signals) #total size of data (bars in chart)
+        self.equity_evolution=[None]*(self.size)
     def run(self):
         for i in range(self.size-1):
             if self.position is None: #no position open yet
+                self.equity=self.capital
+                self.equity_evolution[i]=self.equity #no position open
                 if self.strategy.entry_signals.iloc[i]: #check if we should open position
                     self.position=Position(entry_type=self.strategy.position_type,
                                            entry_price=self.feed["Open"].iloc[i+1],
@@ -117,9 +143,18 @@ class Backtester:
                                            entry_time=i+1,
                                            stop_loss=self.strategy.stop_loss,
                                            take_profit=self.strategy.take_profit)
-                    
 
             elif self.position is not None: #position is open
+
+
+                self.position.update_value(self.feed["Close"].iloc[i])
+                self.position.update_u_pnl(self.feed["Close"].iloc[i])
+                self.equity=self.capital+self.position.u_pnl
+                #we update equity with the capital plus unrealised pnl on the open position
+                
+
+
+                #first, we check if sl or tp is hit
                 ep=self.check_sl_tp(i)
                 # use i bcse sl / tp are intraday events (if high/low that hits on same candle)
                 if  ep is not None: #either sl or tp is hit 
@@ -127,17 +162,19 @@ class Backtester:
                     self.position.close(exit_price=ep,
                                         exit_time=i)
                     self.capital+=self.position.pnl
+                    self.equity=self.capital
                     self.positions.append(self.position) # we add the position to the position list
                     self.position=None # we reset position, as we closed
 
-
+                #we check if exit is trigerred
                 elif self.strategy.exit_signals.iloc[i]: # exit triggered
                     self.position.close(exit_price=self.feed["Open"].iloc[i+1],
                                         exit_time=i+1)
                     self.capital+=self.position.pnl
                     self.positions.append(self.position) # we add the position to the position list
                     self.position=None # we reset position, as we closed
-
+                    
+                self.equity_evolution[i]=self.equity
        
 
         if self.position is not None: #we still have an open position 
@@ -146,7 +183,9 @@ class Backtester:
             self.capital+=self.position.pnl
             self.positions.append(self.position) # we add the position to the position list
             self.position=None # we reset position, as we closed
-
+        
+        self.equity=self.capital
+        self.equity_evolution[-1]=self.equity
     def check_sl_tp(self,i):
         #prices for each
         open_price = self.feed["Open"].iloc[i]
@@ -155,26 +194,30 @@ class Backtester:
         #edge case: sl and tp trigered : we use sl
         if self.position.entry_type == 'SHORT':
 
-            #we check sl first 
-            if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
-                return open_price
-            elif self.position.sl_trigered(high): # we check if stop loss is triggered on high
-                return self.position.stop_loss_price 
+            #we check sl first
+            if self.position.stop_loss_price is not None:
+                if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
+                    return open_price
+                elif self.position.sl_trigered(high): # we check if stop loss is triggered on high
+                    return self.position.stop_loss_price 
             # we use stoplossprice because if sl wasnt hit on open_price but on high, means that price was stop_loss_price at a moment 
-            elif self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
-                return open_price
-            elif self.position.tp_trigered(low): # we check if tp is triggered on low
-                return self.position.take_profit_price
-            
+            if self.position.take_profit_price is not None:
+                if self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
+                    return open_price
+                elif self.position.tp_trigered(low): # we check if tp is triggered on low
+                    return self.position.take_profit_price
+                
         if self.position.entry_type == 'LONG':
-            if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
-                return open_price
-            elif self.position.sl_trigered(low): # we check if stop loss is triggered on low
-                return self.position.stop_loss_price
-            elif self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
-                return open_price
-            elif self.position.tp_trigered(high): # we check if tp is triggered on high
-                return self.position.take_profit_price 
+            if self.position.stop_loss_price is not None:
+                if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
+                    return open_price
+                elif self.position.sl_trigered(low): # we check if stop loss is triggered on low
+                    return self.position.stop_loss_price
+            if self.position.take_profit_price is not None:
+                if self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
+                    return open_price
+                elif self.position.tp_trigered(high): # we check if tp is triggered on high
+                    return self.position.take_profit_price 
 
         return None
 
@@ -183,7 +226,30 @@ class Backtester:
         for position in self.positions:
             total_pnl+=position.pnl
         print('Final Capital: '+str(self.capital)+ ' \nTotal PNL: '+ str(total_pnl))
-
+class Stats:
+    def __init__(self, equity_evolution,positions,initial_capital):
+        self.equity_evolution=equity_evolution
+        self.positions=positions
+        self.initial_capital=initial_capital
+    def print_stats(self):
+        pass
+    def drawdown(self):
+        peak=self.equity_evolution[0]
+        drawdown=[0]*len(self.equity_evolution)
+        for i in range(len(self.equity_evolution)):
+            if self.equity_evolution[i]>peak:
+                peak=self.equity_evolution[i]
+            d=(self.equity_evolution[i]-peak)/peak
+            drawdown[i]=min(0,d)
+        return drawdown
+    def max_drawdown(self):
+        return min(self.drawdown())
+    def avg_drawdown(self):
+        dd=self.drawdown()
+        dd=[i for i in dd if i<0]
+        if len(dd) == 0:
+            return 0
+        return sum(dd)/len(dd)
 
             
 data = {
