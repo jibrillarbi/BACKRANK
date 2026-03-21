@@ -5,7 +5,7 @@ from evaluator import eval_logic
 
 
 class Strategy: 
-    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=None,take_profit=None,max_days=None, timeframe='1D'):
+    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=1,take_profit=1,max_days=None, timeframe='1D'):
         self.name=name # Strategy name 
         self.entry_signals = entry_signal # df with true / false
         self.exit_signals = exit_signal #df with true / false
@@ -17,8 +17,8 @@ class Strategy:
         self.pct=pct#percentage of equity used for each trade
 
 class Position: 
-    def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=None,take_profit=None):
-        self.entry_type=entry_type
+    def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=1,take_profit=1):
+        self.entry_type=entry_type #LONG or SHORT 
         self.entry_price=entry_price
         self.lot_size=lot_size
         self.exit_price=None
@@ -153,7 +153,7 @@ class Backtester:
         high = self.feed["High"].iloc[i]
         low = self.feed["Low"].iloc[i]
         #edge case: sl and tp trigered : we use sl
-        if self.strategy.position_type == 'SHORT':
+        if self.position.entry_type == 'SHORT':
 
             #we check sl first 
             if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
@@ -166,7 +166,7 @@ class Backtester:
             elif self.position.tp_trigered(low): # we check if tp is triggered on low
                 return self.position.take_profit_price
             
-        if self.strategy.position_type == 'LONG':
+        if self.position.entry_type == 'LONG':
             if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
                 return open_price
             elif self.position.sl_trigered(low): # we check if stop loss is triggered on low
@@ -219,7 +219,9 @@ strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
                entry_signal=entry_signal,
                exit_signal=exit_signal,
                position_type=position_type,
-               pct=0.02
+               pct=0.02,
+               take_profit=0.01,
+               stop_loss=0.01
                )
 bt=Backtester(strat,'TEST',df,10000)
 bt.run()
