@@ -14,10 +14,9 @@ class Strategy:
         self.position_type = position_type #LONG or SHORT
         self.max_days=max_days # max holding days
         self.timeframe=timeframe # timeframe
-        self.pct=pct
-        #self.size_pct = size_pct # percentage of equity used for each trade
+        self.pct=pct#percentage of equity used for each trade
 
-class Position(): 
+class Position: 
     def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=None,take_profit=None):
         self.entry_type=entry_type
         self.entry_price=entry_price
@@ -39,7 +38,7 @@ class Position():
             elif self.entry_type=='SHORT':
                 return self.entry_price*(1+self.stop_loss)
             else: 
-                raise SyntaxError(
+                raise ValueError(
             f"Error when calculating stop loss, expected LONG or SHORT, got {self.entry_type})")
         return None
     def take_profit_calc(self):
@@ -49,49 +48,51 @@ class Position():
             elif self.entry_type=='SHORT':
                 return self.entry_price*(1-self.take_profit)
             else: 
-                raise SyntaxError(
+                raise ValueError(
             f"Error when calculating take_profit, expected LONG or SHORT, got {self.entry_type})")
         return None
     def sl_trigered(self,price):
         if self.stop_loss_price is None:
-            raise SyntaxError(
+            raise ValueError(
             f"Error when calculating sl_trigerred, stop_loss_price is None")
         if self.entry_type=='LONG':
                 return price<=self.stop_loss_price # price goes under sl
         elif self.entry_type=='SHORT':
             return price>=self.stop_loss_price #price goes over sl 
         else:
-            raise SyntaxError(
+            raise ValueError(
             f"Error when calculating sl_trigered, expected LONG or SHORT, got {self.entry_type})")
     def tp_trigered(self,price):
         if self.take_profit_price is None:
-            raise SyntaxError(
+            raise ValueError(
             f"Error when calculating tp_trigerred, take_profit_price is None")
         if self.entry_type=='LONG':
                 return price>=self.take_profit_price
         elif self.entry_type=='SHORT':
             return price<=self.take_profit_price
         else:
-            raise SyntaxError(
+            raise ValueError(
             f"Error when calculating tp_trigered, expected LONG or SHORT, got {self.entry_type})")
     def get_pnl(self): 
         if self.open==True:
-            raise SyntaxError(
+            raise RuntimeError(
             f"position is still open")
         if self.exit_price is None: 
-            raise SyntaxError(
+            raise ValueError(
             f"Exit price not defined")
         if self.entry_type=='LONG':
-            self.pnl=self.lot_size*(self.exit_price-self.entry_price)
-            return self.pnl
+            return self.lot_size*(self.exit_price-self.entry_price)
             
         elif self.entry_type=='SHORT':
-            self.pnl=self.lot_size*(self.entry_price-self.exit_price)
-            return self.pnl
+            return self.lot_size*(self.entry_price-self.exit_price)
         else: 
-            raise SyntaxError(
+            raise ValueError(
             f"when calculating get_pnl expected LONG or SHORT, got {self.entry_type})")
-        
+    def close(self,exit_price,exit_time):
+        self.exit_price=exit_price
+        self.exit_time=exit_time
+        self.open=False
+        self.pnl=self.get_pnl()
 
 
 class Backtester:
@@ -103,6 +104,9 @@ class Backtester:
         self.position : Position | None = None  # current open position / initialized as None 
         self.positions=[]
         self.capital=capital
+        assert len(feed) == len(strategy.entry_signals) == len(strategy.exit_signals), \
+        "feed, entry_signals, and exit_signals must have same length"
+        self.size=len(strategy.entry_signals) #total size of data (bars in chart)
     def run(self):
         for i in range(self.size-1):
             if self.position is None: #no position open yet
@@ -115,26 +119,72 @@ class Backtester:
                                            take_profit=self.strategy.take_profit)
                     
 
-            if self.position is not None: #position is open
-                if self.strategy.exit_signals.iloc[i]: # exit triggered
-                    self.position.exit_price=self.feed["Open"].iloc[i+1] # exit price
-                    self.position.exit_time=i+1 # exit time
-                    self.position.open=False
-                    self.capital+=self.position.get_pnl()
+            elif self.position is not None: #position is open
+                ep=self.check_sl_tp(i)
+                # use i bcse sl / tp are intraday events (if high/low that hits on same candle)
+                if  ep is not None: #either sl or tp is hit 
+                    
+                    self.position.close(exit_price=ep,
+                                        exit_time=i)
+                    self.capital+=self.position.pnl
                     self.positions.append(self.position) # we add the position to the position list
                     self.position=None # we reset position, as we closed
+
+
+                elif self.strategy.exit_signals.iloc[i]: # exit triggered
+                    self.position.close(exit_price=self.feed["Open"].iloc[i+1],
+                                        exit_time=i+1)
+                    self.capital+=self.position.pnl
+                    self.positions.append(self.position) # we add the position to the position list
+                    self.position=None # we reset position, as we closed
+
+       
+
         if self.position is not None: #we still have an open position 
-            self.position.exit_price=self.feed["Close"].iloc[-1] # last close price
-            self.position.exit_time=self.size
-            self.position.open=False
-            self.capital+=self.position.get_pnl()
+            self.position.close(exit_price=self.feed["Close"].iloc[-1],
+                                        exit_time=self.size-1)
+            self.capital+=self.position.pnl
             self.positions.append(self.position) # we add the position to the position list
             self.position=None # we reset position, as we closed
+
+    def check_sl_tp(self,i):
+        #prices for each
+        open_price = self.feed["Open"].iloc[i]
+        high = self.feed["High"].iloc[i]
+        low = self.feed["Low"].iloc[i]
+        #edge case: sl and tp trigered : we use sl
+        if self.strategy.position_type == 'SHORT':
+
+            #we check sl first 
+            if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
+                return open_price
+            elif self.position.sl_trigered(high): # we check if stop loss is triggered on high
+                return self.position.stop_loss_price 
+            # we use stoplossprice because if sl wasnt hit on open_price but on high, means that price was stop_loss_price at a moment 
+            elif self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
+                return open_price
+            elif self.position.tp_trigered(low): # we check if tp is triggered on low
+                return self.position.take_profit_price
+            
+        if self.strategy.position_type == 'LONG':
+            if self.position.sl_trigered(open_price): # we check if stop loss is triggered on open_price
+                return open_price
+            elif self.position.sl_trigered(low): # we check if stop loss is triggered on low
+                return self.position.stop_loss_price
+            elif self.position.tp_trigered(open_price): # we check if tp is triggered on open_price
+                return open_price
+            elif self.position.tp_trigered(high): # we check if tp is triggered on high
+                return self.position.take_profit_price 
+
+        return None
+
     def stats(self):
         total_pnl=0
         for position in self.positions:
             total_pnl+=position.pnl
         print('Final Capital: '+str(self.capital)+ ' \nTotal PNL: '+ str(total_pnl))
+
+
             
 data = {
     'Open':   [100.0, 98.0, 96.0, 94.0, 92.0, 91.5, 93.0, 96.0, 100.0, 102.0, 101.0, 100.0, 99.0, 98.0, 97.0],
@@ -155,8 +205,10 @@ print("EXIT AST :", exit_ast)
 
 all_inds = entry_inds | exit_inds
 df = compute_indicators(df, all_inds) 
-entry_signal = eval_logic(df, entry_ast) 
-exit_signal = eval_logic(df, exit_ast) 
+entry_signal = eval_logic(df, entry_ast).fillna(False)
+
+
+exit_signal = eval_logic(df, exit_ast).fillna(False)
 print("Entry signal:") 
 print(entry_signal) 
 print("Exit signal:") 
