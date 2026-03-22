@@ -227,12 +227,38 @@ class Backtester:
             total_pnl+=position.pnl
         print('Final Capital: '+str(self.capital)+ ' \nTotal PNL: '+ str(total_pnl))
 class Stats:
-    def __init__(self, equity_evolution,positions,initial_capital):
+    def __init__(self, equity_evolution,positions,timeframe):
         self.equity_evolution=equity_evolution
         self.positions=positions
-        self.initial_capital=initial_capital
+        self.initial_capital=self.equity_evolution[0]
+        self.timeframe=timeframe
+        self.pct_change=self.get_pct()
+        self.ann_periods=self.get_periods()
     def print_stats(self):
-        pass
+        print('Returns : ', self.pct_change )
+        print('Drawdowns : ',self.drawdown())
+        print('Avg Returns : ',self.get_avg_return())
+        print('Time (in Years)', self.time_in_years())
+        print('CAGR : ',self.CAGR())
+        print('Max Drawdown', self.max_drawdown())
+        print('Calmar : ',self.calmar())
+        print('Volatility : ', self.volatility())
+        print('Sharpe Ratio: ', self.sharpe())
+        print('Annual Sharpe: ',self.ann_sharpe())
+        print('Downside deviation: ',self.get_downside_dev())
+        print('Sortino :',self.sortino())
+        print('Annual Sortino: ',self.ann_sortino())
+    def time_in_years(self):
+        return len(self.pct_change) /self.ann_periods
+    def CAGR(self):
+        x=self.equity_evolution[-1]/ self.initial_capital
+        return x**(1/self.time_in_years()) - 1
+
+    def calmar(self):
+        m_dd=self.max_drawdown()
+        if m_dd==0:
+            return 10
+        return self.CAGR()/m_dd
     def drawdown(self):
         peak=self.equity_evolution[0]
         drawdown=[0]*len(self.equity_evolution)
@@ -243,15 +269,125 @@ class Stats:
             drawdown[i]=min(0,d)
         return drawdown
     def max_drawdown(self):
-        return min(self.drawdown())
+        return min(self.drawdown())*-1
     def avg_drawdown(self):
         dd=self.drawdown()
         dd=[i for i in dd if i<0]
         if len(dd) == 0:
             return 0
         return sum(dd)/len(dd)
+    def get_pct(self):
+        pct=[None]*len(self.equity_evolution)
+        for i in range(len(pct)-1,0,-1):
+            x=self.equity_evolution[i]
+            y=self.equity_evolution[i-1]
+            pct[i]=(x-y)/y
+        del(pct[0])
+        return pct
+    def get_avg_return(self):
+        return sum(self.pct_change)/len(self.pct_change)
+    def get_downside_dev(self,rf=0.03):
+        n=self.ann_periods
+        rf_p=rf/n
 
-            
+        ddev=[i-rf_p for i in self.pct_change]
+        ddev=[min(i,0) for i in ddev]
+        ddev=[i**2 for i in ddev]
+        return (sum(ddev)/len(ddev)) ** (1/2)
+    def volatility(self):
+        mean=self.get_avg_return()
+        dev=[(i-mean)**2 for i in self.pct_change]
+        return (sum(dev)/(len(dev)-1))**(1/2)
+    def sharpe(self,rf=0.03):
+        r=self.get_avg_return()
+        sh=(
+            r
+            -(rf/self.get_periods())) / self.volatility()
+        return sh
+    def ann_sharpe(self,rf=0.03):
+        return self.sharpe(rf)*((self.get_periods())**(1/2))
+    def sortino(self,rf=0.03):
+        r=self.get_avg_return()
+        n=self.ann_periods
+        rf_p=rf/n
+        return (r-rf_p)/self.get_downside_dev()
+    def ann_sortino(self,rf=0.03):
+        return self.sortino() * (self.ann_periods**(1/2))
+    def get_periods(self):
+        periods_map = {
+            '1m': 252 * 390,
+            '5m': 252 * 78,
+            '15m': 252 * 26,
+            '30m': 252 * 13,
+            '1h': 252 * 6.5,
+            '4h': 252 * 1.625,
+            '1D': 252,
+            '1W': 52,
+            '1M': 12
+        }
+        return periods_map[self.timeframe]
+    
+    def n_trades(self):
+        return len(self.positions)
+    
+    def get_wins(self):
+        return [i for i in self.positions if i.pnl>0]
+    
+    def get_losses(self):
+        return [i for i in self.positions if i.pnl<0]
+    
+    def win_rate(self):
+        if len(self.positions)==0:
+            return 0
+        return (len(self.get_wins())/len(self.positions))*100
+    
+    def avg_win(self):
+        wins=self.get_wins()
+        if len(wins)==0:
+            return 0
+        return sum([i.pnl for i in wins])/len(wins)
+    
+    def avg_loss(self):
+        losses=self.get_losses()
+        if len(losses)==0:
+            return 0
+        return sum([i.pnl for i in losses])/len(losses)
+    
+    def profit_factor(self):
+        total_wins=sum([i.pnl for i in self.get_wins()])
+        total_losses=abs(sum([i.pnl for i in self.get_losses()]))
+        if total_losses==0:
+            return 999
+        return total_wins/total_losses
+    
+    def expectancy(self):
+        if len(self.positions)==0:
+            return 0
+        return sum([i.pnl for i in self.positions])/len(self.positions)
+    
+    def avg_trade_duration(self):
+        if len(self.positions)==0:
+            return 0
+        total_duration=0
+        for pos in self.positions:
+            total_duration+=(pos.exit_time - pos.entry_time)
+        return total_duration/len(self.positions)
+    
+    def exposure(self):
+        if len(self.positions)==0:
+            return 0
+        total_bars_in_market=0
+        for pos in self.positions:
+            total_bars_in_market+=(pos.exit_time - pos.entry_time)
+        return (total_bars_in_market/len(self.equity_evolution))*100
+x=[1000]*1638
+x[-7:-1]=[1100,1050,1200,1150,1300]
+x[-1]=1300
+t=[1100,1050,1200,1150,1300]
+s=Stats(t,None,'1h')
+s.print_stats()
+
+'''
 data = {
     'Open':   [100.0, 98.0, 96.0, 94.0, 92.0, 91.5, 93.0, 96.0, 100.0, 102.0, 101.0, 100.0, 99.0, 98.0, 97.0],
     'High':   [101.0, 99.0, 97.0, 95.0, 93.0, 92.5, 95.0, 99.0, 102.0, 104.0, 102.0, 101.0, 100.0, 99.0, 98.0],
@@ -292,3 +428,4 @@ strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
 bt=Backtester(strat,'TEST',df,10000)
 bt.run()
 bt.stats()
+'''
