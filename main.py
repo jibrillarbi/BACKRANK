@@ -2,8 +2,7 @@ import pandas as pd
 from parser import parse_rule
 from indicators import compute_indicators
 from evaluator import eval_logic
-
-
+from backtesting.test import GOOG
 class Strategy: 
     def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=None,take_profit=None, timeframe='1D'):
         self.name=name # Strategy name 
@@ -220,12 +219,11 @@ class Backtester:
                     return self.position.take_profit_price 
 
         return None
+    def create_stats(self):
+        s=Stats(self.equity_evolution,self.positions,self.strategy.timeframe)
+        s.print_stats()
+        return s
 
-    def stats(self):
-        total_pnl=0
-        for position in self.positions:
-            total_pnl+=position.pnl
-        print('Final Capital: '+str(self.capital)+ ' \nTotal PNL: '+ str(total_pnl))
 class Stats:
     def __init__(self, equity_evolution,positions,timeframe):
         self.equity_evolution=equity_evolution
@@ -235,12 +233,12 @@ class Stats:
         self.pct_change=self.get_pct()
         self.ann_periods=self.get_periods()
     def print_stats(self):
-        print('Returns : ', self.pct_change )
-        print('Drawdowns : ',self.drawdown())
+        print('PNL : ',self.get_pnl())
         print('Avg Returns : ',self.get_avg_return())
-        print('Time (in Years)', self.time_in_years())
+        print('Time in Market (in Years)', self.time_in_years())
         print('CAGR : ',self.CAGR())
         print('Max Drawdown', self.max_drawdown())
+        print('Avg Drawdown : ', self.avg_drawdown())
         print('Calmar : ',self.calmar())
         print('Volatility : ', self.volatility())
         print('Sharpe Ratio: ', self.sharpe())
@@ -248,8 +246,18 @@ class Stats:
         print('Downside deviation: ',self.get_downside_dev())
         print('Sortino :',self.sortino())
         print('Annual Sortino: ',self.ann_sortino())
+        print('Number of Trades: ', self.n_trades())
+        print('Win Rate : ', self.win_rate())
+        print('Avg Win: ', self.avg_win())
+        print('Avg Loss: ', self.avg_loss())
+        print('Profit Factor: ', self.profit_factor())
+        print('Expectancy: ', self.expectancy())
+        print('Avg Trade Duration: ', self.avg_trade_duration())
+        print('Exposure: ', self.exposure())
     def time_in_years(self):
         return len(self.pct_change) /self.ann_periods
+    def get_pnl(self):
+        return self.equity_evolution[-1]-self.equity_evolution[0]
     def CAGR(self):
         x=self.equity_evolution[-1]/ self.initial_capital
         return x**(1/self.time_in_years()) - 1
@@ -380,14 +388,8 @@ class Stats:
         for pos in self.positions:
             total_bars_in_market+=(pos.exit_time - pos.entry_time)
         return (total_bars_in_market/len(self.equity_evolution))*100
-x=[1000]*1638
-x[-7:-1]=[1100,1050,1200,1150,1300]
-x[-1]=1300
-t=[1100,1050,1200,1150,1300]
-s=Stats(t,None,'1h')
-s.print_stats()
 
-'''
+
 data = {
     'Open':   [100.0, 98.0, 96.0, 94.0, 92.0, 91.5, 93.0, 96.0, 100.0, 102.0, 101.0, 100.0, 99.0, 98.0, 97.0],
     'High':   [101.0, 99.0, 97.0, 95.0, 93.0, 92.5, 95.0, 99.0, 102.0, 104.0, 102.0, 101.0, 100.0, 99.0, 98.0],
@@ -395,6 +397,7 @@ data = {
     'Close':  [99.0,  97.0, 95.0, 93.0, 91.0, 92.0, 94.5, 98.5, 101.0, 103.0, 100.0,  99.0,  98.0, 97.0, 96.0],
     'Volume': [10000, 10000, 10000, 10000, 10000, 12000, 15000, 25000, 20000, 18000, 15000, 12000, 10000, 10000, 10000]
 }
+
 df = pd.DataFrame(data)
 entry_rule="SMA(2) > SMA(4) && Volume > VMA(3)"
 exit_rule="Close < SMA(2)"
@@ -415,8 +418,6 @@ print("Entry signal:")
 print(entry_signal) 
 print("Exit signal:") 
 print(exit_signal)
-#def __init__(self,name,entry_signal,exit_signal,position_type,
-# stop_loss=None,take_profit=None,max_days=None, timeframe='1D'):
 strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
                entry_signal=entry_signal,
                exit_signal=exit_signal,
@@ -427,5 +428,12 @@ strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
                )
 bt=Backtester(strat,'TEST',df,10000)
 bt.run()
-bt.stats()
+s=bt.create_stats()
+'''
+x=[1000]*1638
+x[-7:-1]=[1100,1050,1200,1150,1300]
+x[-1]=1300
+t=[1100,1050,1200,1150,1300]
+s=Stats(t,None,'1h')
+s.print_stats()
 '''
