@@ -13,25 +13,16 @@ class Strategy:
         self.position_type = position_type #LONG or SHORT
         self.timeframe=timeframe # timeframe
         self.pct=pct#percentage of equity used for each trade
-class StrategyEvaluator(Strategy):
+class StrategyEvaluator():
     def __init__(self, strategy: Strategy, feed: pd.DataFrame):
-        super().__init__(
-            name=strategy.name,
-            entry_rule=strategy.entry_rule,
-            exit_rule=strategy.exit_rule,
-            position_type=strategy.position_type,
-            pct=strategy.pct,
-            stop_loss=strategy.stop_loss,
-            take_profit=strategy.take_profit,
-            timeframe=strategy.timeframe
-        )
+        self.strategy=strategy
         self.feed = feed
         self.entry_signals,self.exit_signals=self.evaluate_entry_exit()
 
 
     def evaluate_entry_exit(self):
-        entry_ast, entry_inds = parse_rule(self.entry_rule)
-        exit_ast, exit_inds   = parse_rule(self.exit_rule)
+        entry_ast, entry_inds = parse_rule(self.strategy.entry_rule)
+        exit_ast, exit_inds   = parse_rule(self.strategy.exit_rule)
         all_inds = entry_inds | exit_inds
         df = compute_indicators(self.feed, all_inds) 
         entry_signal = eval_logic(df, entry_ast).fillna(False)
@@ -160,12 +151,12 @@ class Backtester:
                 self.equity=self.capital
                 self.equity_evolution[i]=self.equity #no position open
                 if self.strategy.entry_signals.iloc[i]: #check if we should open position
-                    self.position=Position(entry_type=self.strategy.position_type,
+                    self.position=Position(entry_type=self.strategy.strategy.position_type,
                                            entry_price=self.feed["Open"].iloc[i+1],
-                                           lot_size=(self.capital*self.strategy.pct)/self.feed["Open"].iloc[i+1],
+                                           lot_size=(self.capital*self.strategy.strategy.pct)/self.feed["Open"].iloc[i+1],
                                            entry_time=i+1,
-                                           stop_loss=self.strategy.stop_loss,
-                                           take_profit=self.strategy.take_profit)
+                                           stop_loss=self.strategy.strategy.stop_loss,
+                                           take_profit=self.strategy.strategy.take_profit)
 
             elif self.position is not None: #position is open
 
@@ -244,7 +235,7 @@ class Backtester:
 
         return None
     def create_stats(self):
-        s=Stats(self.equity_evolution,self.positions,self.strategy.timeframe)
+        s=Stats(self.equity_evolution,self.positions,self.strategy.strategy.timeframe)
         s.print_stats()
         return s
 
@@ -307,14 +298,13 @@ class Stats:
         dd=[i for i in dd if i<0]
         if len(dd) == 0:
             return 0
-        return sum(dd)/len(dd)
+        return abs(sum(dd)/len(dd))
     def get_pct(self):
-        pct=[None]*len(self.equity_evolution)
-        for i in range(len(pct)-1,0,-1):
-            x=self.equity_evolution[i]
-            y=self.equity_evolution[i-1]
-            pct[i]=(x-y)/y
-        del(pct[0])
+        pct = []
+        for i in range(1, len(self.equity_evolution)):
+            x = self.equity_evolution[i]
+            y = self.equity_evolution[i-1]
+            pct.append((x - y) / y)
         return pct
     def get_avg_return(self):
         return sum(self.pct_change)/len(self.pct_change)
@@ -332,9 +322,12 @@ class Stats:
         return (sum(dev)/(len(dev)-1))**(1/2)
     def sharpe(self,rf=0.03):
         r=self.get_avg_return()
+        vol=self.volatility()
+        if vol==0: 
+            return 99
         sh=(
             r
-            -(rf/self.get_periods())) / self.volatility()
+            -(rf/self.get_periods())) / vol
         return sh
     def ann_sharpe(self,rf=0.03):
         return self.sharpe(rf)*((self.get_periods())**(1/2))
@@ -342,6 +335,9 @@ class Stats:
         r=self.get_avg_return()
         n=self.ann_periods
         rf_p=rf/n
+        dd=self.get_downside_dev()
+        if dd==0:
+            return 99
         return (r-rf_p)/self.get_downside_dev()
     def ann_sortino(self,rf=0.03):
         return self.sortino() * (self.ann_periods**(1/2))
@@ -422,36 +418,22 @@ data = {
     'Volume': [10000, 10000, 10000, 10000, 10000, 12000, 15000, 25000, 20000, 18000, 15000, 12000, 10000, 10000, 10000]
 }
 
-df = pd.DataFrame(GOOG)
 entry_rule="SMA(2) > SMA(4) && Volume > VMA(3)"
 exit_rule="Close < SMA(2)"
 position_type='LONG'
 entry_ast, entry_inds = parse_rule(entry_rule)
 exit_ast, exit_inds   = parse_rule(exit_rule)
 
-print("ENTRY AST:", entry_ast)
-print("EXIT AST :", exit_ast)
-
-all_inds = entry_inds | exit_inds
-df = compute_indicators(df, all_inds) 
-entry_signal = eval_logic(df, entry_ast).fillna(False)
-
-
-exit_signal = eval_logic(df, exit_ast).fillna(False)
-print("Entry signal:") 
-print(entry_signal) 
-print("Exit signal:") 
-print(exit_signal)
 strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
                entry_rule=entry_rule,
                exit_rule=exit_rule,
                position_type=position_type,
                pct=0.02,
-               take_profit=0.01,
-               stop_loss=0.01
+               take_profit=0.1,
+               stop_loss=0.05
                )
 strat_eval=StrategyEvaluator(strat,GOOG)
-bt=Backtester(strat_eval,'TEST',GOOG,10000)
+bt=Backtester(strat_eval,'TEST',GOOG,1000000)
 bt.run()
 s=bt.create_stats()
 '''
