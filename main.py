@@ -4,16 +4,40 @@ from indicators import compute_indicators
 from evaluator import eval_logic
 from backtesting.test import GOOG
 class Strategy: 
-    def __init__(self,name,entry_signal,exit_signal,position_type,pct,stop_loss=None,take_profit=None, timeframe='1D'):
+    def __init__(self,name,entry_rule,exit_rule,position_type,pct,stop_loss=None,take_profit=None, timeframe='1D'):
         self.name=name # Strategy name 
-        self.entry_signals = entry_signal # df with true / false
-        self.exit_signals = exit_signal #df with true / false
+        self.entry_rule = entry_rule # str of entry rule, e.g. "SMA(2) > SMA(4) && Volume > VMA(3)"
+        self.exit_rule = exit_rule #str of exit rule, e.g. "Close < SMA(2)"
         self.stop_loss = stop_loss #percentage based stop loss
         self.take_profit = take_profit #percentage based tp 
         self.position_type = position_type #LONG or SHORT
         self.timeframe=timeframe # timeframe
         self.pct=pct#percentage of equity used for each trade
+class StrategyEvaluator(Strategy):
+    def __init__(self, strategy: Strategy, feed: pd.DataFrame):
+        super().__init__(
+            name=strategy.name,
+            entry_rule=strategy.entry_rule,
+            exit_rule=strategy.exit_rule,
+            position_type=strategy.position_type,
+            pct=strategy.pct,
+            stop_loss=strategy.stop_loss,
+            take_profit=strategy.take_profit,
+            timeframe=strategy.timeframe
+        )
+        self.feed = feed
+        self.entry_signals,self.exit_signals=self.evaluate_entry_exit()
 
+
+    def evaluate_entry_exit(self):
+        entry_ast, entry_inds = parse_rule(self.entry_rule)
+        exit_ast, exit_inds   = parse_rule(self.exit_rule)
+        all_inds = entry_inds | exit_inds
+        df = compute_indicators(self.feed, all_inds) 
+        entry_signal = eval_logic(df, entry_ast).fillna(False)
+        exit_signal = eval_logic(df, exit_ast).fillna(False)
+        return entry_signal, exit_signal
+    
 class Position: 
     def __init__(self,entry_type,entry_price,entry_time,lot_size,stop_loss=None,take_profit=None):
         self.entry_type=entry_type #LONG or SHORT 
@@ -117,8 +141,8 @@ class Position:
 
 
 class Backtester:
-    def __init__(self,strategy:Strategy,symbol,feed: pd.DataFrame,capital):
-        self.strategy=strategy # Strategy class object
+    def __init__(self,strategy:StrategyEvaluator,symbol,feed: pd.DataFrame,capital):
+        self.strategy=strategy # StrategyEvaluator class object
         self.symbol=symbol # symbol AAPL etc
         self.feed=feed  #symbol+timeframe, df object AAPL_1D
         self.position : Position | None = None  # current open position / initialized as None 
@@ -398,7 +422,7 @@ data = {
     'Volume': [10000, 10000, 10000, 10000, 10000, 12000, 15000, 25000, 20000, 18000, 15000, 12000, 10000, 10000, 10000]
 }
 
-df = pd.DataFrame(data)
+df = pd.DataFrame(GOOG)
 entry_rule="SMA(2) > SMA(4) && Volume > VMA(3)"
 exit_rule="Close < SMA(2)"
 position_type='LONG'
@@ -419,14 +443,15 @@ print(entry_signal)
 print("Exit signal:") 
 print(exit_signal)
 strat=Strategy(name='ENTRY '+entry_rule+'EXIT '+exit_rule,
-               entry_signal=entry_signal,
-               exit_signal=exit_signal,
+               entry_rule=entry_rule,
+               exit_rule=exit_rule,
                position_type=position_type,
                pct=0.02,
                take_profit=0.01,
                stop_loss=0.01
                )
-bt=Backtester(strat,'TEST',df,10000)
+strat_eval=StrategyEvaluator(strat,GOOG)
+bt=Backtester(strat_eval,'TEST',GOOG,10000)
 bt.run()
 s=bt.create_stats()
 '''
