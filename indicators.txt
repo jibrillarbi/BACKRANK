@@ -1,0 +1,20 @@
+Here are the core metrics, one line each, clean and minimal:
+
+Total Return (%) – overall percentage gain/loss over the backtest
+CAGR – annualized growth rate of the strategy
+Equity Curve – portfolio value over time
+Max Drawdown (%) – largest peak-to-trough loss
+Average Drawdown (%) – average size of drawdowns
+Sharpe Ratio – return per unit of total volatility
+Sortino Ratio – return per unit of downside volatility
+Calmar Ratio – CAGR divided by max drawdown
+Volatility – standard deviation of returns
+Number of Trades – total trades executed
+
+Win Rate (%) – percentage of profitable trades
+Average Win – mean profit of winning trades
+Average Loss – mean loss of losing trades
+Profit Factor – total profit divided by total loss
+Expectancy – average profit per trade
+Average Trade Duration – average time trades are held
+Exposure (%) – percentage of time in the market
