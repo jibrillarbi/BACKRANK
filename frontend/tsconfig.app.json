@@ -5,9 +5,15 @@
     "useDefineForClassFields": true,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
     "types": ["vite/client"],
     "skipLibCheck": true,
-
+    
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
