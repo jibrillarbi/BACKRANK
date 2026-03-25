@@ -1,18 +1,11 @@
-import { useEffect, useState } from "react"
+import { Routes, Route } from "react-router-dom"
+import CalcPage from "./pages/CalcPage"
 
 function App() {
-  const [message, setMessage] = useState("")
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/")
-      .then(res => res.json())
-      .then(data => setMessage(data.message))
-  }, [])
-
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-blue-500">{message}</h1>
-    </div>
+    <Routes>
+      <Route path="/" element={<CalcPage />} />
+    </Routes>
   )
 }
 
