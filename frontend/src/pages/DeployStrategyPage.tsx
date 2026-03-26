@@ -47,11 +47,11 @@ export default function DeployStrategyPage() {
   const navigate = useNavigate();
   const { strategyName: contextStrategyName, entryRule, exitRule } = useStrategy();
   // Form State
-  const [ticker, setTicker] = useState<string>('BTC/USD');
+  const [ticker, setTicker] = useState<string>('AAPL');
   const [timeframe, setTimeframe] = useState<string>('1h');
+  const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   
   const [positionSize, setPositionSize] = useState<number>(5);
-  const [positionType, setPositionType] = useState<'PERCENT' | 'USD'>('PERCENT');
   
   const [useStopLoss, setUseStopLoss] = useState<boolean>(false);
   const [stopLossPct, setStopLossPct] = useState<number>(2);
@@ -61,21 +61,19 @@ export default function DeployStrategyPage() {
 
   const handleDeploy = () => {
     const payload = {
-      strategyName: contextStrategyName || 'Trend Follower Alpha',
-      ticker,
-      timeframe,
-      positionSize: { value: positionSize, type: positionType },
-      riskManagement: {
-        stopLoss: useStopLoss ? stopLossPct : null,
-        takeProfit: useTakeProfit ? takeProfitPct : null
-      },
-      strategyLogic: {
-        entry: entryRule,
-        exit: exitRule
-      }
+      NAME: contextStrategyName || 'My strategy',
+      ENTRY: entryRule,
+      EXIT: exitRule,
+      DIRECTION: direction,
+      TIMEFRAME: timeframe,
+      TICKER: ticker,
+      SIZE: `${positionSize}`,
+      SL: useStopLoss ? `${stopLossPct}` : 'None',
+      TP: useTakeProfit ? `${takeProfitPct}` : 'None'
     };
-    console.log("Deploying Strategy with config:", payload);
-    alert("Strategy deployed! Check console for payload.");
+    console.log("📊 DEPLOYMENT CONFIG:");
+    console.log(JSON.stringify(payload, null, 2));
+    alert("Strategy deployed! Check console for config.");
   };
 
   return (
@@ -179,37 +177,53 @@ export default function DeployStrategyPage() {
 
             <hr className="border-gray-800/60" />
 
+            {/* Direction */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-300 block">Direction</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDirection('LONG')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+                    direction === 'LONG'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  📈 LONG
+                </button>
+                <button
+                  onClick={() => setDirection('SHORT')}
+                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+                    direction === 'SHORT'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  📉 SHORT
+                </button>
+              </div>
+            </div>
+
+            <hr className="border-gray-800/60" />
+
             {/* Position Sizing */}
             <div className="space-y-4">
               <label className="font-semibold text-gray-300 flex items-center gap-2 text-lg">
                 <DollarSign size={20} className="text-emerald-400" /> Position Sizing
               </label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <input 
-                    type="number" 
-                    value={positionSize}
-                    onChange={(e) => setPositionSize(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-4 h-12 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    min={0}
-                  />
-                </div>
-                <div className="w-40 shrink-0 relative">
-                  <select 
-                    value={positionType} 
-                    onChange={(e) => setPositionType(e.target.value as 'PERCENT' | 'USD')}
-                    className="w-full appearance-none bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-3 h-12 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
-                    <option value="PERCENT">% of Equity</option>
-                    <option value="USD">Fixed USD</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-500 pointer-events-none" />
-                </div>
+              <div className="relative">
+                <input 
+                  type="number" 
+                  value={positionSize}
+                  onChange={(e) => setPositionSize(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-4 pr-12 h-12 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min={0}
+                  max={100}
+                />
+                <span className="absolute right-4 top-3.5 text-gray-400 font-medium text-lg">%</span>
               </div>
               <p className="text-sm text-gray-500">
-                {positionType === 'PERCENT' 
-                  ? `Allocates ${positionSize}% of your total available portfolio balance per trade.` 
-                  : `Allocates exactly $${positionSize} per trade, regardless of total balance.`}
+                Allocates {positionSize}% of your total available portfolio balance per trade.
               </p>
             </div>
 
