@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Rocket, 
   Settings2, 
@@ -10,6 +11,7 @@ import {
   PlayCircle,
   ChevronDown
 } from 'lucide-react';
+import { useStrategy } from '../contexts/StrategyContext';
 
 // Mock data for the dropdowns
 const WATCHLIST_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA'];
@@ -42,6 +44,8 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val:
 );
 
 export default function DeployStrategyPage() {
+  const navigate = useNavigate();
+  const { strategyName: contextStrategyName, entryRule, exitRule } = useStrategy();
   // Form State
   const [ticker, setTicker] = useState<string>('BTC/USD');
   const [timeframe, setTimeframe] = useState<string>('1h');
@@ -57,13 +61,17 @@ export default function DeployStrategyPage() {
 
   const handleDeploy = () => {
     const payload = {
-      strategyName: "Trend Follower Alpha",
+      strategyName: contextStrategyName || 'Trend Follower Alpha',
       ticker,
       timeframe,
       positionSize: { value: positionSize, type: positionType },
       riskManagement: {
         stopLoss: useStopLoss ? stopLossPct : null,
         takeProfit: useTakeProfit ? takeProfitPct : null
+      },
+      strategyLogic: {
+        entry: entryRule,
+        exit: exitRule
       }
     };
     console.log("Deploying Strategy with config:", payload);
@@ -96,10 +104,18 @@ export default function DeployStrategyPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-blue-400/80 mb-1">Active Strategy</p>
-                <h3 className="text-xl font-bold text-blue-100">Trend Follower Alpha</h3>
+                <h3 className="text-xl font-bold text-blue-100">{contextStrategyName || 'Trend Follower Alpha'}</h3>
+                {entryRule && (
+                  <p className="text-xs text-blue-300/70 mt-2">
+                    Entry: <span className="font-mono text-blue-300">{entryRule.substring(0, 50)}...</span>
+                  </p>
+                )}
               </div>
             </div>
-            <button className="px-4 py-2 border border-blue-800/50 rounded-md text-sm font-medium text-blue-300 hover:bg-blue-900/30 transition-colors">
+            <button 
+              onClick={() => navigate('/strategy')}
+              className="px-4 py-2 border border-blue-800/50 rounded-md text-sm font-medium text-blue-300 hover:bg-blue-900/30 transition-colors"
+            >
               Edit Logic
             </button>
           </div>
