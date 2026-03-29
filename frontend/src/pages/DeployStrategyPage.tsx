@@ -12,6 +12,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useStrategy } from '../contexts/StrategyContext';
+import { api, type Strategy } from '../api';
 
 // Mock data for the dropdowns
 const WATCHLIST_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA'];
@@ -58,6 +59,50 @@ export default function DeployStrategyPage() {
   
   const [useTakeProfit, setUseTakeProfit] = useState<boolean>(false);
   const [takeProfitPct, setTakeProfitPct] = useState<number>(6);
+
+  // Backtest State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<any>(null);
+
+  const handleRunBacktest = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const strategy: Strategy = {
+        NAME: contextStrategyName || 'My Strategy',
+        ENTRY: entryRule,
+        EXIT: exitRule,
+        DIRECTION: direction,
+        TIMEFRAME: timeframe,
+        TICKER: ticker,
+        SIZE: `${positionSize}`,
+        SL: useStopLoss ? `${stopLossPct}` : 'None',
+        TP: useTakeProfit ? `${takeProfitPct}` : 'None'
+      };
+      
+      const data = await api.runBacktest(strategy);
+      setResults(data);
+      console.log(' BACKTEST RESULTS:');
+      console.log(JSON.stringify(data, null, 2));
+      
+      // Navigate to results page with data
+      navigate('/backtest-results', { 
+        state: { 
+          results: data,
+          strategy: strategy
+        } 
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to run backtest';
+      setError(message);
+      console.error(err);
+      alert(` Backtest failed: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDeploy = () => {
     const payload = {
@@ -296,20 +341,31 @@ export default function DeployStrategyPage() {
 
           </div>
           
-          <div className="bg-gray-900/40 border-t border-gray-800 px-6 py-5 flex items-center justify-between">
-            <button className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              Cancel
-            </button>
-            <div className="flex gap-3">
-              <button className="px-4 py-2 rounded-md text-sm font-medium border border-gray-700 bg-gray-800 text-white hover:bg-gray-700 transition-colors flex items-center gap-2">
-                <PlayCircle size={16} /> Run Backtest
+          <div className="bg-gray-900/40 border-t border-gray-800 px-6 py-5">
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm">
+                {error}
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <button className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                Cancel
               </button>
-              <button 
-                onClick={handleDeploy} 
-                className="px-5 py-2 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-colors flex items-center gap-2"
-              >
-                <Rocket size={16} /> Deploy to Live
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleRunBacktest}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-md text-sm font-medium border border-gray-700 bg-gray-800 text-white hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <PlayCircle size={16} /> {loading ? 'Running...' : 'Run Backtest'}
+                </button>
+                <button 
+                  onClick={handleDeploy} 
+                  className="px-5 py-2 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 transition-colors flex items-center gap-2"
+                >
+                  <Rocket size={16} /> Deploy to Live
+                </button>
+              </div>
             </div>
           </div>
         </div>
