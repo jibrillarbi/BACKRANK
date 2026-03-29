@@ -1,4 +1,4 @@
-
+from backtesting.test import GOOG
 '''
 from backtesting.test import GOOG
 print(GOOG.tail())
@@ -349,6 +349,8 @@ entry_signal = eval_expression(df_entry, entry)
 exit_signal  = eval_expression(df_exit, exit)
 print(entry_signal)
 print(exit_signal)
+print (GOOG.head())
+print(GOOG.tail())
 '''
 entry and exit could be combined
 true from entry we switch to exit 
