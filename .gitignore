@@ -1,5 +1,29 @@
+
+# Python
 backend/venv/
 backend/__pycache__/
-
-frontend/venv
 *.pyc
+*.pyo
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+dist/
+build/
+
+# Frontend
+frontend/venv
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
