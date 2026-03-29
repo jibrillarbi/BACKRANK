@@ -106,17 +106,19 @@ class Backtester:
 
         return None
     def create_stats(self):
-        s=Stats(self.equity_evolution,self.positions,self.strategy.strategy.timeframe)
+        dates = self.feed.index.tolist()
+        s=Stats(self.equity_evolution,self.positions,self.strategy.strategy.timeframe,dates)
         s.print_stats()
         return s.get_stats_dict()
         
     
 class Stats:
-    def __init__(self, equity_evolution,positions,timeframe):
+    def __init__(self, equity_evolution,positions,timeframe,dates=None):
         self.equity_evolution=equity_evolution
         self.positions=positions
         self.initial_capital=self.equity_evolution[0]
         self.timeframe=timeframe
+        self.dates=dates
         self.pct_change=self.get_pct()
         self.ann_periods=self.get_periods()
     def get_stats_dict(self):
@@ -143,8 +145,27 @@ class Stats:
             'profit_factor': self.profit_factor(),
             'expectancy': self.expectancy(),
             'avg_trade_duration': self.avg_trade_duration(),
-            'exposure': self.exposure()
+            'exposure': self.exposure(),
+            'equity_evolution': self.equity_evolution,
+            'positions': [self.format_position(pos) for pos in self.positions]
         }
+    
+    def format_position(self, pos):
+        entry_date = 'N/A'
+        exit_date = 'N/A'
+        
+        if self.dates and isinstance(self.dates, list) and len(self.dates) > 0:
+            if 0 <= pos.entry_time < len(self.dates):
+                entry_date = str(self.dates[pos.entry_time])
+            if 0 <= pos.exit_time < len(self.dates):
+                exit_date = str(self.dates[pos.exit_time])
+        
+        return (
+            f"Position({pos.entry_type}) | "
+            f"Open: {entry_date} @ {pos.entry_price:.2f} | "
+            f"Exit: {exit_date} @ {pos.exit_price:.2f} | "
+            f"PNL: {pos.pnl:.2f}"
+        )
     
     def print_stats(self):
         print('PNL : ',self.get_pnl())

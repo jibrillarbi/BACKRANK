@@ -29,4 +29,4 @@ def read_root():
 @app.post("/run_back")
 def get_strategy_evaluation(strategy: StrategyIn):
     results = run_backtest(strategy.model_dump())
-    return {"evaluation": results}
+    return results

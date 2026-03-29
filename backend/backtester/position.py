@@ -98,4 +98,12 @@ class Position:
         self.open=False
         self.update_value(exit_price)
         self.pnl=self.get_pnl()
+    
+    def __str__(self):
+        return (
+            f"Position({self.entry_type}) | "
+            f"Open: {self.entry_time} @ {self.entry_price:.2f} | "
+            f"Exit: {self.exit_time} @ {self.exit_price:.2f} | "
+            f"PNL: {self.pnl:.2f}"
+        )
 
