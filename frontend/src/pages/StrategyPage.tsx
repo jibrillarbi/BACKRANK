@@ -13,18 +13,12 @@ export default function StrategyPage() {
   const [entryConditions, setEntryConditions] = useState<Condition[]>([
     {
       id: 1, logicalOp: null,
-      left: { type: 'indicator', source: 'SMA', period: 3, mathOp: '+', mathVal: 3 },
-      comp: 'crossesAbove',
-      right: { type: 'indicator', source: 'SMA', period: 5 }
+      left: { type: 'indicator', source: 'SMA', period: 2 },
+      comp: '>',
+      right: { type: 'indicator', source: 'SMA', period: 4 }
     },
     {
       id: 2, logicalOp: '&&',
-      left: { type: 'indicator', source: 'RSI', period: 2 },
-      comp: '<',
-      right: { type: 'number', source: 'Number', value: 95 }
-    },
-    {
-      id: 3, logicalOp: '&&',
       left: { type: 'field', source: 'Volume' },
       comp: '>',
       right: { type: 'indicator', source: 'VMA', period: 3 }
@@ -36,7 +30,7 @@ export default function StrategyPage() {
       id: 1, logicalOp: null,
       left: { type: 'field', source: 'Close' },
       comp: '<',
-      right: { type: 'indicator', source: 'SMA', period: 3 }
+      right: { type: 'indicator', source: 'SMA', period: 2 }
     }
   ]);
 
