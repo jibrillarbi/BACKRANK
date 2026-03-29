@@ -7,27 +7,26 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-class Results(BaseModel):
-    name: str
+class StrategyIn(BaseModel):
+    NAME: str
+    ENTRY: str
+    EXIT: str
+    DIRECTION: str
+    TIMEFRAME: str
+    TICKER: str
+    SIZE: str
+    SL: str
+    TP: str
 @app.get("/")
 def read_root():
     return {"message": "Hello from FastAPI"}
-@app.get("/run_backtest")
-def get_strategy_evaluation():
-    results = run_backtest(    strategy = {
-        "NAME": "My Strategy",
-        "ENTRY": "SMA(2) > SMA(4) && Volume > VMA(3)",
-        "EXIT": "Close < SMA(2)",
-        "DIRECTION": "LONG",
-        "TIMEFRAME": "1D",
-        "TICKER": "AAPL",
-        "SIZE": "5",
-        "SL": "None",
-        "TP": "None",
-    })
-    return {results}
+
+@app.post("/run_back")
+def get_strategy_evaluation(strategy: StrategyIn):
+    results = run_backtest(strategy.model_dump())
+    return {"evaluation": results}
