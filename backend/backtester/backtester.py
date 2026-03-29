@@ -1,5 +1,5 @@
-from strategy import Strategy,StrategyEvaluator
-from position import Position
+from backtester.strategy import Strategy,StrategyEvaluator
+from backtester.position import Position
 import pandas as pd
 
 class Backtester:
@@ -108,8 +108,8 @@ class Backtester:
     def create_stats(self):
         s=Stats(self.equity_evolution,self.positions,self.strategy.strategy.timeframe)
         s.print_stats()
-        return s
-    
+        return s.get_stats_dict()
+        
     
 class Stats:
     def __init__(self, equity_evolution,positions,timeframe):
@@ -119,6 +119,33 @@ class Stats:
         self.timeframe=timeframe
         self.pct_change=self.get_pct()
         self.ann_periods=self.get_periods()
+    def get_stats_dict(self):
+        return {
+            'pnl': self.get_pnl(),
+            'avg_returns': self.get_avg_return(),
+            'time_in_years': self.time_in_years(),
+            'total_time_in_market_bars': self.total_time_in_market(),
+            'total_time_in_market_years': self.total_time_in_market_years(),
+            'cagr': self.CAGR(),
+            'max_drawdown': self.max_drawdown(),
+            'avg_drawdown': self.avg_drawdown(),
+            'calmar': self.calmar(),
+            'volatility': self.volatility(),
+            'sharpe_ratio': self.sharpe(),
+            'annual_sharpe': self.ann_sharpe(),
+            'downside_deviation': self.get_downside_dev(),
+            'sortino': self.sortino(),
+            'annual_sortino': self.ann_sortino(),
+            'number_of_trades': self.n_trades(),
+            'win_rate': self.win_rate(),
+            'avg_win': self.avg_win(),
+            'avg_loss': self.avg_loss(),
+            'profit_factor': self.profit_factor(),
+            'expectancy': self.expectancy(),
+            'avg_trade_duration': self.avg_trade_duration(),
+            'exposure': self.exposure()
+        }
+    
     def print_stats(self):
         print('PNL : ',self.get_pnl())
         print('Avg Returns : ',self.get_avg_return())
@@ -280,3 +307,30 @@ class Stats:
         for pos in self.positions:
             total_bars_in_market+=(pos.exit_time - pos.entry_time)
         return (total_bars_in_market/len(self.equity_evolution))*100
+    
+    def total_time_in_market(self):
+        if len(self.positions) == 0:
+            return 0
+        total_bars = 0
+        for pos in self.positions:
+            total_bars += (pos.exit_time - pos.entry_time)
+        return total_bars
+    
+    def total_time_in_market_years(self):
+       
+        total_bars = self.total_time_in_market()
+        return total_bars / self.ann_periods
+    
+    def time_in_market_per_position(self):
+       
+        positions_data = []
+        for idx, pos in enumerate(self.positions):
+            duration = pos.exit_time - pos.entry_time
+            positions_data.append({
+                'position': idx + 1,
+                'entry_time': pos.entry_time,
+                'exit_time': pos.exit_time,
+                'duration_bars': duration,
+                'pnl': pos.pnl
+            })
+        return positions_data

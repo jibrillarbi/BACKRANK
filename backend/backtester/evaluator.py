@@ -1,4 +1,4 @@
-from ast_nodes import IndicatorNode, NumberNode, BinaryOpNode, ComparisonNode, LogicalNode
+from backtester.ast_nodes import IndicatorNode, NumberNode, BinaryOpNode, ComparisonNode, LogicalNode
 
 def eval_scalar(df, node):
     if isinstance(node, IndicatorNode):

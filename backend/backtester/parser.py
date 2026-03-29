@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from ast_nodes import IndicatorNode, NumberNode, BinaryOpNode, ComparisonNode, LogicalNode
+from backtester.ast_nodes import IndicatorNode, NumberNode, BinaryOpNode, ComparisonNode, LogicalNode
 
 '''
 NAME     - indicator or field name     SMA, RSI, Close, Volume

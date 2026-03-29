@@ -1,7 +1,7 @@
 import pandas as pd
-from parser import parse_rule
-from indicators import compute_indicators
-from evaluator import eval_logic
+from backtester.parser import parse_rule
+from backtester.indicators import compute_indicators
+from backtester.evaluator import eval_logic
 from backtesting.test import GOOG
 
 data = {

@@ -1,6 +1,6 @@
-from indicators import compute_indicators
-from evaluator import eval_logic
-from parser import parse_rule
+from backtester.indicators import compute_indicators
+from backtester.evaluator import eval_logic
+from backtester.parser import parse_rule
 import pandas as pd
 class Strategy: 
     def __init__(self,name,entry_rule,exit_rule,position_type,pct,stop_loss=None,take_profit=None, timeframe='1D'):
