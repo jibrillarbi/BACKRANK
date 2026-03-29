@@ -109,6 +109,8 @@ class Backtester:
         s=Stats(self.equity_evolution,self.positions,self.strategy.strategy.timeframe)
         s.print_stats()
         return s
+    
+    
 class Stats:
     def __init__(self, equity_evolution,positions,timeframe):
         self.equity_evolution=equity_evolution
