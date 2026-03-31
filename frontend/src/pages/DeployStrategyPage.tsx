@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Rocket, 
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useStrategy } from '../contexts/StrategyContext';
 import { api, type Strategy } from '../api';
+import { getCurrentUser } from '../api/useAuth';
 
 // Mock data for the dropdowns
 const WATCHLIST_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA'];
@@ -47,6 +48,14 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val:
 export default function DeployStrategyPage() {
   const navigate = useNavigate();
   const { strategyName: contextStrategyName, entryRule, exitRule } = useStrategy();
+  
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user?.email) {
+      console.log('User email:', user.email);
+    }
+  }, []);
+  
   // Form State
   const [ticker, setTicker] = useState<string>('AAPL');
   const [timeframe, setTimeframe] = useState<string>('1h');

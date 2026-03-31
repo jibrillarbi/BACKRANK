@@ -3,10 +3,18 @@ import { StrategyProvider } from "./contexts/StrategyContext"
 import DeployStrategyPage from "./pages/DeployStrategyPage"
 import StrategyPage from "./pages/StrategyPage"
 import BacktestResultsPage from "./pages/BacktestResultsPage"
+import LoginPage from "./pages/LoginPage"
+import RegisterPage from "./pages/RegisterPage"
 import Test from "./pages/Test"
 function App() {
   return (
     <Routes>
+      <Route path="/login" element={
+        <LoginPage />
+      } />
+      <Route path="/register" element={
+        <RegisterPage />
+      } />
       <Route path="/" element={
         <StrategyProvider>
           <DeployStrategyPage />
