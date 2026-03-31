@@ -27,3 +27,11 @@ frontend/.vite/
 .env
 .env.local
 .env.*.local
+backend/backtester/__pycache__/ast_nodes.cpython-313.pyc
+backend/backtester/__pycache__/backtester.cpython-313.pyc
+backend/backtester/__pycache__/evaluator.cpython-313.pyc
+backend/backtester/__pycache__/indicators.cpython-313.pyc
+backend/backtester/__pycache__/main_backtester.cpython-313.pyc
+backend/backtester/__pycache__/parser.cpython-313.pyc
+backend/backtester/__pycache__/position.cpython-313.pyc
+backend/backtester/__pycache__/strategy.cpython-313.pyc
