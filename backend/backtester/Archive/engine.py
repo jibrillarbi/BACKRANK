@@ -345,7 +345,7 @@ exit, exit_inds  = json_parser(rules, "exitRule")
 df_entry = compute_indicators(df, entry_inds)
 df_exit = compute_indicators(df, exit_inds)
 
-entry_signal = eval_expression(df_entry, entry)
+entry_signal = eval_expression(df_entry, entry) 
 exit_signal  = eval_expression(df_exit, exit)
 print(entry_signal)
 print(exit_signal)
