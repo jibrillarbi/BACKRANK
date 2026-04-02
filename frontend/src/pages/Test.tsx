@@ -1,46 +1,28 @@
-import React, { useState } from 'react'
-import { api, type Strategy } from "../api"
+import React from 'react'
+import { useCheckSession } from '../api/useAuth';
 
 const Test = () => {
-  const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleRun = async () => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const strategy: Strategy = {
-        NAME: "My Strategy",
-        ENTRY: "SMA(2) > SMA(4) && Volume > VMA(3)",
-        EXIT: "Close < SMA(2)",
-        DIRECTION: "LONG",
-        TIMEFRAME: "1D",
-        TICKER: "AAPL",
-        SIZE: "5",
-        SL: "None",
-        TP: "None",
-      }
-      
-      const data = await api.runBacktest(strategy)
-      setResults(data)
-      console.log(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to run backtest")
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { mutate: checkSession, data, isPending } = useCheckSession();
 
   return (
-    <div>
-      <button onClick={handleRun} disabled={loading}>
-        {loading ? "Running..." : "Run Backtest"}
+    <div className="p-8">
+      <button 
+        onClick={() => checkSession()}
+        disabled={isPending}
+        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+      >
+        {isPending ? 'Checking...' : 'Check Session'}
       </button>
-      {error && <div style={{ color: "red" }}>{error}</div>}
-      {results && <pre>{JSON.stringify(results, null, 2)}</pre>}
+      {data && (
+        <div className="mt-4 p-4 bg-green-100 rounded">
+          <p className="text-green-800">
+            <strong>User ID:</strong> {data.user_id}
+          </p>
+          <p className="text-green-800">
+            <strong>Authenticated:</strong> {data.authenticated ? 'Yes' : 'No'}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

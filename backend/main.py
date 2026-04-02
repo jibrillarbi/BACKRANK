@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from backtester.main_backtester import run_backtest
 from pydantic import BaseModel
 from supabase import create_client, Client
@@ -12,7 +13,7 @@ load_dotenv()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,8 +31,10 @@ serializer = URLSafeSerializer(SECRET_KEY)
 
 
 def get_current_user(request: Request):
+    print(request)
     cookie = request.cookies.get("session")
     if not cookie:
+        print("no cookie set") 
         return None
     try: 
         data = serializer.loads(cookie)
@@ -78,39 +81,76 @@ def get_strategy_evaluation(strategy: StrategyIn):
     results = run_backtest(strategy.model_dump())
     return results
 
-@app.post("/register", response_model=AuthResponse)
+@app.post("/register")
 def register(data: RegisterRequest):
     try:
         auth_res = supabase.auth.sign_up({"email": data.email, "password": data.password})
         if auth_res.user:
-            return AuthResponse(
-                user_id=auth_res.user.id,
-                email=auth_res.user.email,
-                fullName=data.fullName
+            session_data = {"user_id": auth_res.user.id}
+            session_token = serializer.dumps(session_data)
+            
+            response = JSONResponse(
+                content=AuthResponse(
+                    user_id=auth_res.user.id,
+                    email=auth_res.user.email,
+                    fullName=data.fullName
+                ).model_dump()
             )
+            response.set_cookie(
+                key="session",
+                value=session_token,
+                httponly=True,
+                secure=False,  # Set to True in production with HTTPS
+                samesite="lax",
+                max_age=86400  # 24 hours
+            )
+            return response
         raise HTTPException(status_code=400, detail="Registration failed")
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Registration error: {str(e)}")
 
-@app.post("/login", response_model=AuthResponse)
-def login(data: LoginRequest):
+@app.get("/login")
+def login(email: str, password: str):
     try:
         auth_res = supabase.auth.sign_in_with_password(
-            {"email": data.email, "password": data.password}
+            {"email": email, "password": password}
         )
         if auth_res.session and auth_res.user:
-            return AuthResponse(
-                user_id=auth_res.user.id,
-                email=auth_res.user.email
+            session_data = {"user_id": auth_res.user.id}
+            session_token = serializer.dumps(session_data)
+            print("Supabase good") 
+            
+            response = JSONResponse(
+                content=AuthResponse(
+                    user_id=auth_res.user.id,
+                    email=auth_res.user.email
+                ).model_dump()
             )
+            response.set_cookie(
+                key="session",
+                value=session_token,
+                httponly=True,
+                secure=False,  # Set to True in production with HTTPS
+                samesite="lax",
+                max_age=86400  # 24 hours
+            )
+            return response
         raise HTTPException(status_code=401, detail="Invalid email or password")
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-@app.post("/logout")
+@app.get("/logout")
 def logout():
-    return {"message": "Logged out successfully"}
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    response.delete_cookie(
+        key="session",
+        path="/",
+        httponly=True,
+        secure=False,
+        samesite="lax"
+    )
+    return response

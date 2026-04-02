@@ -37,9 +37,9 @@ export const api = {
   
   // Auth endpoints
   login: (data: LoginRequest) =>
-    client.post("/login", data).then(res => res.data) as Promise<AuthResponse>,
+    client.get("/login", { params: data }).then(res => res.data) as Promise<AuthResponse>,
   register: (data: RegisterRequest) =>
     client.post("/register", data).then(res => res.data) as Promise<AuthResponse>,
   logout: () =>
-    client.post("/logout").then(res => res.data),
+    client.get("/logout").then(res => res.data),
 }

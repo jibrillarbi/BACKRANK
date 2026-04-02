@@ -6,11 +6,15 @@ import BacktestResultsPage from "./pages/BacktestResultsPage"
 import LoginPage from "./pages/LoginPage"
 import RegisterPage from "./pages/RegisterPage"
 import Test from "./pages/Test"
+import LogoutPage from "./pages/LogoutPage"
 function App() {
   return (
     <Routes>
       <Route path="/login" element={
         <LoginPage />
+      } />
+      <Route path="/logout" element={
+        <LogoutPage />
       } />
       <Route path="/register" element={
         <RegisterPage />
