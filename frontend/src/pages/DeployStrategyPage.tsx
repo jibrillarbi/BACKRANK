@@ -34,7 +34,7 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val:
     aria-checked={checked}
     onClick={() => onChange(!checked)}
     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-950 ${
-      checked ? 'bg-blue-600' : 'bg-gray-700'
+      checked ? 'bg-blue-600' : 'bg-base-300'
     }`}
   >
     <span
@@ -131,7 +131,7 @@ export default function DeployStrategyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-gray-100 p-4 md:p-8 lg:p-12 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-black text-base-content p-4 md:p-8 lg:p-12 font-sans selection:bg-blue-500/30">
       <div className="max-w-3xl mx-auto space-y-8">
         
         {/* Header */}
@@ -142,7 +142,7 @@ export default function DeployStrategyPage() {
           <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
             Launch Strategy
           </h1>
-          <p className="text-gray-400 text-lg leading-relaxed">
+          <p className="text-base-content/70 text-lg leading-relaxed">
             Configure market parameters, position sizing, and risk management for your selected algorithm.
           </p>
         </header>
@@ -165,7 +165,7 @@ export default function DeployStrategyPage() {
               </div>
             </div>
             <button 
-              onClick={() => navigate('/strategy')}
+              onClick={() => navigate('/strategy/edit')}
               className="px-4 py-2 border border-blue-800/50 rounded-md text-sm font-medium text-blue-300 hover:bg-blue-900/30 transition-colors"
             >
               Edit Logic
@@ -174,14 +174,14 @@ export default function DeployStrategyPage() {
         </div>
 
         {/* Configuration Form */}
-        <div className="bg-gray-950/50 border border-gray-800 rounded-xl shadow-xl overflow-hidden">
+        <div className="bg-base-100/50 border border-base-300 rounded-xl shadow-xl overflow-hidden">
           
-          <div className="border-b border-gray-800/50 bg-gray-900/20 px-6 py-5">
+          <div className="border-b border-base-300/50 bg-base-200/20 px-6 py-5">
             <h2 className="text-xl font-semibold text-white flex items-center gap-2">
               <LineChart className="text-emerald-400" size={20} />
               Market Parameters
             </h2>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-base-content/70 mt-1">
               Define where and how frequently this strategy trades.
             </p>
           </div>
@@ -191,14 +191,14 @@ export default function DeployStrategyPage() {
             {/* Ticker & Timeframe Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3 relative">
-                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <LineChart size={16} className="text-gray-500" /> Target Asset
+                <label className="text-sm font-medium text-base-content flex items-center gap-2">
+                  <LineChart size={16} className="text-base-content/60" /> Target Asset
                 </label>
                 <div className="relative">
                   <select 
                     value={ticker} 
                     onChange={(e) => setTicker(e.target.value)}
-                    className="w-full appearance-none bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-4 h-12 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-full appearance-none bg-base-200 border border-base-300 text-base-content rounded-md px-4 h-12 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <optgroup label="Your Watchlist">
                       {WATCHLIST_TICKERS.map(t => (
@@ -206,41 +206,41 @@ export default function DeployStrategyPage() {
                       ))}
                     </optgroup>
                   </select>
-                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-base-content/60 pointer-events-none" />
                 </div>
               </div>
 
               <div className="space-y-3 relative">
-                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                  <Clock size={16} className="text-gray-500" /> Timeframe (Candle Size)
+                <label className="text-sm font-medium text-base-content flex items-center gap-2">
+                  <Clock size={16} className="text-base-content/60" /> Timeframe (Candle Size)
                 </label>
                 <div className="relative">
                   <select 
                     value={timeframe} 
                     onChange={(e) => setTimeframe(e.target.value)}
-                    className="w-full appearance-none bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-4 h-12 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-full appearance-none bg-base-200 border border-base-300 text-base-content rounded-md px-4 h-12 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     {TIMEFRAMES.map(tf => (
                       <option key={tf.value} value={tf.value}>{tf.label}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-base-content/60 pointer-events-none" />
                 </div>
               </div>
             </div>
 
-            <hr className="border-gray-800/60" />
+            <hr className="border-base-300/60" />
 
             {/* Direction */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-300 block">Direction</label>
+              <label className="text-sm font-medium text-base-content block">Direction</label>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDirection('LONG')}
                   className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
                     direction === 'LONG'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-base-300 text-base-content hover:bg-base-300'
                   }`}
                 >
                   📈 LONG
@@ -250,7 +250,7 @@ export default function DeployStrategyPage() {
                   className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
                     direction === 'SHORT'
                       ? 'bg-red-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-base-300 text-base-content hover:bg-base-300'
                   }`}
                 >
                   📉 SHORT
@@ -258,11 +258,11 @@ export default function DeployStrategyPage() {
               </div>
             </div>
 
-            <hr className="border-gray-800/60" />
+            <hr className="border-base-300/60" />
 
             {/* Position Sizing */}
             <div className="space-y-4">
-              <label className="font-semibold text-gray-300 flex items-center gap-2 text-lg">
+              <label className="font-semibold text-base-content flex items-center gap-2 text-lg">
                 <DollarSign size={20} className="text-emerald-400" /> Position Sizing
               </label>
               <div className="relative">
@@ -270,31 +270,31 @@ export default function DeployStrategyPage() {
                   type="number" 
                   value={positionSize}
                   onChange={(e) => setPositionSize(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-gray-900 border border-gray-700 text-gray-100 rounded-md px-4 pr-12 h-12 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-base-200 border border-base-300 text-base-content rounded-md px-4 pr-12 h-12 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   min={0}
                   max={100}
                 />
-                <span className="absolute right-4 top-3.5 text-gray-400 font-medium text-lg">%</span>
+                <span className="absolute right-4 top-3.5 text-base-content/70 font-medium text-lg">%</span>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-base-content/60">
                 Allocates {positionSize}% of your total available portfolio balance per trade.
               </p>
             </div>
 
-            <hr className="border-gray-800/60" />
+            <hr className="border-base-300/60" />
 
             {/* Risk Management */}
             <div className="space-y-6">
-              <label className="font-semibold text-gray-300 flex items-center gap-2 text-lg">
+              <label className="font-semibold text-base-content flex items-center gap-2 text-lg">
                 <ShieldAlert size={20} className="text-amber-400" /> Risk Management (Optional)
               </label>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* Stop Loss Card */}
-                <div className={`p-4 rounded-xl border transition-colors ${useStopLoss ? 'bg-red-500/5 border-red-500/20' : 'bg-gray-900/30 border-gray-800'}`}>
+                <div className={`p-4 rounded-xl border transition-colors ${useStopLoss ? 'bg-red-500/5 border-red-500/20' : 'bg-base-200/30 border-base-300'}`}>
                   <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2 cursor-pointer" onClick={() => setUseStopLoss(!useStopLoss)}>
+                    <label className="text-sm font-medium text-base-content flex items-center gap-2 cursor-pointer" onClick={() => setUseStopLoss(!useStopLoss)}>
                       Stop Loss
                     </label>
                     <ToggleSwitch checked={useStopLoss} onChange={setUseStopLoss} />
@@ -307,9 +307,9 @@ export default function DeployStrategyPage() {
                           type="number" 
                           value={stopLossPct}
                           onChange={(e) => setStopLossPct(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-gray-950 border border-red-900/50 text-gray-100 rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full bg-base-100 border border-red-900/50 text-base-content rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
-                        <Percent className="absolute right-3 top-2.5 h-5 w-5 text-gray-500 pointer-events-none" />
+                        <Percent className="absolute right-3 top-2.5 h-5 w-5 text-base-content/60 pointer-events-none" />
                       </div>
                       <p className="text-xs text-red-400/80 mt-2">
                         Closes position if price drops {stopLossPct}% from entry.
@@ -319,9 +319,9 @@ export default function DeployStrategyPage() {
                 </div>
 
                 {/* Take Profit Card */}
-                <div className={`p-4 rounded-xl border transition-colors ${useTakeProfit ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-gray-900/30 border-gray-800'}`}>
+                <div className={`p-4 rounded-xl border transition-colors ${useTakeProfit ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-base-200/30 border-base-300'}`}>
                   <div className="flex items-center justify-between mb-4">
-                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2 cursor-pointer" onClick={() => setUseTakeProfit(!useTakeProfit)}>
+                    <label className="text-sm font-medium text-base-content flex items-center gap-2 cursor-pointer" onClick={() => setUseTakeProfit(!useTakeProfit)}>
                       Take Profit
                     </label>
                     <ToggleSwitch checked={useTakeProfit} onChange={setUseTakeProfit} />
@@ -334,9 +334,9 @@ export default function DeployStrategyPage() {
                           type="number" 
                           value={takeProfitPct}
                           onChange={(e) => setTakeProfitPct(parseFloat(e.target.value) || 0)}
-                          className="w-full bg-gray-950 border border-emerald-900/50 text-gray-100 rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full bg-base-100 border border-emerald-900/50 text-base-content rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                        <Percent className="absolute right-3 top-2.5 h-5 w-5 text-gray-500 pointer-events-none" />
+                        <Percent className="absolute right-3 top-2.5 h-5 w-5 text-base-content/60 pointer-events-none" />
                       </div>
                       <p className="text-xs text-emerald-400/80 mt-2">
                         Secures gains if price rises {takeProfitPct}% from entry.
@@ -350,21 +350,21 @@ export default function DeployStrategyPage() {
 
           </div>
           
-          <div className="bg-gray-900/40 border-t border-gray-800 px-6 py-5">
+          <div className="bg-base-200/40 border-t border-base-300 px-6 py-5">
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm">
                 {error}
               </div>
             )}
             <div className="flex items-center justify-between">
-              <button className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              <button className="px-4 py-2 rounded-md text-sm font-medium text-base-content/70 hover:text-white transition-colors">
                 Cancel
               </button>
               <div className="flex gap-3">
                 <button 
                   onClick={handleRunBacktest}
                   disabled={loading}
-                  className="px-4 py-2 rounded-md text-sm font-medium border border-gray-700 bg-gray-800 text-white hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-md text-sm font-medium border border-base-300 bg-base-300 text-white hover:bg-base-300 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlayCircle size={16} /> {loading ? 'Running...' : 'Run Backtest'}
                 </button>

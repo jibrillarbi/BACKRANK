@@ -35,8 +35,8 @@ export const StrategyBuilder: React.FC<StrategyBuilderProps> = ({ title, conditi
   };
 
   return (
-    <div className="mb-8 bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl">
-      <div className="bg-gray-800/50 px-5 py-3 border-b border-gray-800 flex justify-between items-center">
+    <div className="mb-8 bg-base-200 border border-base-300 rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-base-300/50 px-5 py-3 border-b border-base-300 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           {title}
         </h2>
@@ -44,7 +44,7 @@ export const StrategyBuilder: React.FC<StrategyBuilderProps> = ({ title, conditi
       
       <div className="p-5 flex flex-col gap-4">
         {conditions.length === 0 && (
-          <div className="text-center py-8 text-gray-500 text-sm">
+          <div className="text-center py-8 text-base-content/60 text-sm">
             No rules configured yet. Click add to start building.
           </div>
         )}
@@ -66,7 +66,7 @@ export const StrategyBuilder: React.FC<StrategyBuilderProps> = ({ title, conditi
               )}
             </div>
 
-            <div className="flex-1 flex flex-col lg:flex-row items-center gap-3 bg-gray-800/30 p-2 rounded-xl border border-gray-800/50">
+            <div className="flex-1 flex flex-col lg:flex-row items-center gap-3 bg-base-300/30 p-2 rounded-xl border border-base-300/50">
               {/* Left Side */}
               <DataSelector 
                 value={cond.left} 
@@ -94,7 +94,7 @@ export const StrategyBuilder: React.FC<StrategyBuilderProps> = ({ title, conditi
             {/* Remove Button */}
             <button
               onClick={() => removeCondition(cond.id)}
-              className="p-3 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0"
+              className="p-3 text-base-content/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0"
               title="Remove Rule"
             >
               <Trash2 size={18} />
@@ -105,7 +105,7 @@ export const StrategyBuilder: React.FC<StrategyBuilderProps> = ({ title, conditi
         <div className="pl-24 mt-2">
           <button
             onClick={addCondition}
-            className="flex items-center gap-2 text-sm font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-700 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-base-content bg-base-300 hover:bg-base-300 hover:text-white px-4 py-2 rounded-lg border border-base-300 transition-colors"
           >
             <Plus size={16} /> Add Condition
           </button>

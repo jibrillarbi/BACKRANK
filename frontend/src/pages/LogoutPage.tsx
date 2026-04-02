@@ -24,12 +24,12 @@ export default function LogoutPage() {
   }, [logout, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 font-sans">
       <div className="text-center">
         <LogOut className="w-16 h-16 text-emerald-400 mx-auto mb-6" />
         <h1 className="text-3xl font-bold mb-2">Logged Out</h1>
-        <p className="text-gray-400 mb-6">See you next time!</p>
-        <p className="text-sm text-gray-500">Redirecting to login...</p>
+        <p className="text-base-content/70 mb-6">See you next time!</p>
+        <p className="text-sm text-base-content/60">Redirecting to login...</p>
       </div>
     </div>
   );
