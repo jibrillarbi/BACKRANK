@@ -67,6 +67,12 @@ class AuthResponse(BaseModel):
 def home(request: Request, user_id: str = Depends(get_current_user)):
     return {"message": "Hello"}
 
+@app.get("/me")
+def get_current_user_info(user_id: str = Depends(get_current_user)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"user_id": user_id, "authenticated": True}
+
 @app.post("/run_back")
 def get_strategy_evaluation(strategy: StrategyIn):
     results = run_backtest(strategy.model_dump())

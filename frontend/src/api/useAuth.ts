@@ -52,3 +52,9 @@ export const getCurrentUser = () => {
 export const isLoggedIn = () => {
   return !!localStorage.getItem("user_id")
 }
+
+export const useCheckSession = () => {
+  return useMutation({
+    mutationFn: () => api.getCurrentUser(),
+  })
+}

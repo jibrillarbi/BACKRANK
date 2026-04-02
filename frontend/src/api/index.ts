@@ -31,6 +31,7 @@ export interface AuthResponse {
 
 export const api = {
   getRoot: () => client.get("/").then(res => res.data),
+  getCurrentUser: () => client.get("/me").then(res => res.data),
   runBacktest: (strategy: Strategy) => 
     client.post("/run_back", strategy).then(res => res.data),
   
