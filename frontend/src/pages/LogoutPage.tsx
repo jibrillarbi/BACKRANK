@@ -15,9 +15,9 @@ export default function LogoutPage() {
       },
       onError: () => {
         // Fallback
-        localStorage.removeItem("user_id");
+        localStorage.removeItem("uid");
         localStorage.removeItem("email");
-        localStorage.removeItem("fullName");
+        localStorage.removeItem("username");
         setTimeout(() => navigate('/login'), 1500);
       },
     });

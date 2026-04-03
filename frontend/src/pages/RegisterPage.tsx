@@ -6,7 +6,7 @@ import { useRegister } from '../api/useAuth';
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { mutate: register, isPending, error: apiError } = useRegister();
-  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,7 +17,7 @@ export default function RegisterPage() {
     setError('');
 
     // Validation
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
@@ -33,7 +33,7 @@ export default function RegisterPage() {
     }
 
     register(
-      { fullName, email, password },
+      { username, email, password },
       {
         onSuccess: () => {
           navigate('/login');
@@ -63,19 +63,19 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleRegister} className="p-6 space-y-4">
-            {/* Full Name Input */}
+            {/* Username Input */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-base-content mb-2">
-                Full Name
+              <label htmlFor="username" className="block text-sm font-medium text-base-content mb-2">
+                Username
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-3 text-base-content/60" size={18} />
                 <input
-                  id="fullName"
+                  id="username"
                   type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Doe"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="john_doe"
                   className="w-full bg-base-300 border border-base-300 rounded-lg pl-10 pr-4 py-2.5 text-base-content placeholder-base-content/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-colors"
                 />
               </div>
