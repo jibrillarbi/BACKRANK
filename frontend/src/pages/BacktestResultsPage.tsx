@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { useSaveStrategy } from '../api/useAuth';
+import { useState } from 'react';
 
 interface BacktestData {
   pnl: number;
@@ -82,6 +84,27 @@ export default function BacktestResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
+  const { mutate: saveStrategy, isPending: isSaving } = useSaveStrategy();
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveStrategy = () => {
+    if (!state) return;
+    
+    saveStrategy(
+      {
+        name: state.strategy.NAME,
+        entry_rule: state.strategy.ENTRY,
+        exit_rule: state.strategy.EXIT,
+        is_published: false
+      },
+      {
+        onSuccess: () => {
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 3000);
+        }
+      }
+    );
+  };
 
   if (!state) {
     return (
@@ -316,6 +339,11 @@ export default function BacktestResultsPage() {
 
         {/* Action Buttons */}
         <div className="flex gap-4 justify-end pt-4">
+          {saveSuccess && (
+            <div className="px-4 py-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-medium">
+              Strategy saved successfully!
+            </div>
+          )}
           <button
             onClick={() => navigate('/deploy')}
             className="px-6 py-3 rounded-lg border border-base-300 bg-base-300 text-white hover:bg-base-300 transition-colors font-medium"
@@ -327,6 +355,13 @@ export default function BacktestResultsPage() {
             className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
           >
             Edit Strategy
+          </button>
+          <button
+            onClick={handleSaveStrategy}
+            disabled={isSaving}
+            className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-medium disabled:bg-gray-500 disabled:cursor-not-allowed"
+          >
+            {isSaving ? 'Saving...' : 'Save Strategy to Profile'}
           </button>
         </div>
 

@@ -1,16 +1,14 @@
 import { useMutation } from "@tanstack/react-query"
-import { api, type LoginRequest, type RegisterRequest, type AuthResponse } from "./index"
+import { api, type LoginRequest, type RegisterRequest, type AuthResponse, type Strategy } from "./index"
 
 export const useLogin = () => {
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => api.login(data),
     onSuccess: (data) => {
       // Store user info in localStorage
-      localStorage.setItem("user_id", data.user_id)
+      localStorage.setItem("uid", data.uid)
       localStorage.setItem("email", data.email)
-      if (data.fullName) {
-        localStorage.setItem("fullName", data.fullName)
-      }
+      localStorage.setItem("username", data.username)
     },
   })
 }
@@ -20,11 +18,9 @@ export const useRegister = () => {
     mutationFn: (data) => api.register(data),
     onSuccess: (data) => {
       // Store user info in localStorage
-      localStorage.setItem("user_id", data.user_id)
+      localStorage.setItem("uid", data.uid)
       localStorage.setItem("email", data.email)
-      if (data.fullName) {
-        localStorage.setItem("fullName", data.fullName)
-      }
+      localStorage.setItem("username", data.username)
     },
   })
 }
@@ -34,23 +30,29 @@ export const useLogout = () => {
     mutationFn: () => api.logout(),
     onSuccess: () => {
       // Clear user info from localStorage
-      localStorage.removeItem("user_id")
+      localStorage.removeItem("uid")
       localStorage.removeItem("email")
-      localStorage.removeItem("fullName")
+      localStorage.removeItem("username")
     },
   })
 }
 
 export const getCurrentUser = () => {
-  const user_id = localStorage.getItem("user_id")
+  const uid = localStorage.getItem("uid")
   const email = localStorage.getItem("email")
-  const fullName = localStorage.getItem("fullName")
+  const username = localStorage.getItem("username")
 
-  return user_id ? { user_id, email, fullName } : null
+  return uid ? { uid, email, username } : null
+}
+
+export const useSaveStrategy = () => {
+  return useMutation<any, Error, Strategy>({
+    mutationFn: (data: Strategy) => api.saveStrategy(data),
+  })
 }
 
 export const isLoggedIn = () => {
-  return !!localStorage.getItem("user_id")
+  return !!localStorage.getItem("uid")
 }
 
 export const useCheckSession = () => {

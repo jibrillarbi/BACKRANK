@@ -1,6 +1,13 @@
 import client from "./client"
 
 export interface Strategy {
+  name: string
+  entry_rule: string
+  exit_rule: string
+  is_published: boolean
+}
+
+export interface StrategyBacktest {
   NAME: string
   ENTRY: string
   EXIT: string
@@ -18,21 +25,21 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  fullName: string
+  username: string
   email: string
   password: string
 }
 
 export interface AuthResponse {
-  user_id: string
+  uid: string
   email: string
-  fullName?: string
+  username: string
 }
 
 export const api = {
   getRoot: () => client.get("/").then(res => res.data),
   getCurrentUser: () => client.get("/me").then(res => res.data),
-  runBacktest: (strategy: Strategy) => 
+  runBacktest: (strategy: StrategyBacktest) => 
     client.post("/run_back", strategy).then(res => res.data),
   
   // Auth endpoints
@@ -42,4 +49,7 @@ export const api = {
     client.post("/register", data).then(res => res.data) as Promise<AuthResponse>,
   logout: () =>
     client.get("/logout").then(res => res.data),
+  
+  saveStrategy: (strategy: Strategy) =>
+    client.post("/create_strategy", strategy).then(res => res.data),
 }

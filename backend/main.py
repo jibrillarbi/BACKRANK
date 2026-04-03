@@ -38,7 +38,7 @@ def get_current_user(request: Request):
         return None
     try: 
         data = serializer.loads(cookie)
-        return data.get("user_id")
+        return data.get("uid")
     except Exception:
         return None
 
@@ -52,20 +52,24 @@ class StrategyIn(BaseModel):
     SIZE: str
     SL: str
     TP: str
-
+class Strategy(BaseModel):
+    name: str
+    entry_rule: str
+    exit_rule: str
+    is_published: bool
 class LoginRequest(BaseModel):
     email: str
     password: str
 
 class RegisterRequest(BaseModel):
-    fullName: str
+    username: str
     email: str
     password: str
 
 class AuthResponse(BaseModel):
-    user_id: str
+    uid: str
     email: str
-    fullName: Optional[str] = None
+    username: str
 @app.get("/")
 def home(request: Request, user_id: str = Depends(get_current_user)):
     return {"message": "Hello"}
@@ -74,7 +78,22 @@ def home(request: Request, user_id: str = Depends(get_current_user)):
 def get_current_user_info(user_id: str = Depends(get_current_user)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return {"user_id": user_id, "authenticated": True}
+    return {"uid": user_id, "authenticated": True}
+
+@app.post("/create_strategy")
+def save_strategy(strategy: Strategy,user_id: str= Depends(get_current_user)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try: 
+        strategy_data = strategy.model_dump()
+        strategy_data["uid"] = user_id
+        res = supabase.table("strategy").insert(strategy_data).execute()
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error Saving strategy: {str(e)}")
+
+
+
 
 @app.post("/run_back")
 def get_strategy_evaluation(strategy: StrategyIn):
@@ -84,25 +103,36 @@ def get_strategy_evaluation(strategy: StrategyIn):
 @app.post("/register")
 def register(data: RegisterRequest):
     try:
-        auth_res = supabase.auth.sign_up({"email": data.email, "password": data.password})
-        if auth_res.user:
-            session_data = {"user_id": auth_res.user.id}
+        existing_user = supabase.table("user").select("*").eq("email", data.email).execute()
+        if existing_user.data:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        
+
+        new_user = supabase.table("user").insert({
+            "username": data.username,
+            "email": data.email,
+            "password": data.password
+        }).execute()
+        
+        if new_user.data:
+            user = new_user.data[0]
+            session_data = {"uid": user["uid"]}
             session_token = serializer.dumps(session_data)
             
             response = JSONResponse(
                 content=AuthResponse(
-                    user_id=auth_res.user.id,
-                    email=auth_res.user.email,
-                    fullName=data.fullName
+                    uid=user["uid"],
+                    email=user["email"],
+                    username=user["username"]
                 ).model_dump()
             )
             response.set_cookie(
                 key="session",
                 value=session_token,
                 httponly=True,
-                secure=False,  # Set to True in production with HTTPS
+                secure=False,
                 samesite="lax",
-                max_age=86400  # 24 hours
+                max_age=86400
             )
             return response
         raise HTTPException(status_code=400, detail="Registration failed")
@@ -114,30 +144,36 @@ def register(data: RegisterRequest):
 @app.get("/login")
 def login(email: str, password: str):
     try:
-        auth_res = supabase.auth.sign_in_with_password(
-            {"email": email, "password": password}
+
+        user_res = supabase.table("user").select("*").eq("email", email).execute()
+        
+        if not user_res.data:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        user = user_res.data[0]
+        
+        if user["password"] != password:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        session_data = {"uid": user["uid"]}
+        session_token = serializer.dumps(session_data)
+        
+        response = JSONResponse(
+            content=AuthResponse(
+                uid=user["uid"],
+                email=user["email"],
+                username=user["username"]
+            ).model_dump()
         )
-        if auth_res.session and auth_res.user:
-            session_data = {"user_id": auth_res.user.id}
-            session_token = serializer.dumps(session_data)
-            print("Supabase good") 
-            
-            response = JSONResponse(
-                content=AuthResponse(
-                    user_id=auth_res.user.id,
-                    email=auth_res.user.email
-                ).model_dump()
-            )
-            response.set_cookie(
-                key="session",
-                value=session_token,
-                httponly=True,
-                secure=False,  # Set to True in production with HTTPS
-                samesite="lax",
-                max_age=86400  # 24 hours
-            )
-            return response
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        response.set_cookie(
+            key="session",
+            value=session_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=86400
+        )
+        return response
     except HTTPException:
         raise
     except Exception as e:
