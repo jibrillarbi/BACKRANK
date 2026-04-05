@@ -52,11 +52,17 @@ class StrategyIn(BaseModel):
     SIZE: str
     SL: str
     TP: str
+class Postr(BaseModel):
+    sid: str
+    body: str
+
 class Strategy(BaseModel):
     name: str
     entry_rule: str
     exit_rule: str
     is_published: bool
+
+
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -216,3 +222,38 @@ def logout():
         samesite="lax"
     )
     return response
+@app.post("/posts")
+def add_post(data: Postr, user_id: str = Depends(get_current_user)):
+    if not user_id: 
+        raise HTTPException(status_code=401,detail="Not logged in! ")
+    try:
+        
+        existing = supabase.table("posts").select("*").eq("uid", user_id).eq("sid",data.sid).execute()
+        
+        if existing.data:
+            existing_strategy = existing.data[0]
+            return {
+                "message": f"Post for this strategy already made. Please edit or delete"
+            }
+        
+        post_data = data.model_dump()
+        res =  supabase.table("posts").insert({
+            "uid": user_id,
+            "sid": post_data["sid"],
+            "body": post_data["body"]
+        }).execute()
+
+        return res.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error Posting {str(e)}")
+    
+
+@app.get("/posts")
+def get_posts():
+    try:
+        res = supabase.table("posts") \
+            .select("id, body, user(username, uid), strategy(name), likes, comments, created_at") \
+            .execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching posts: {str(e)}")

@@ -66,4 +66,10 @@ export const api = {
     client.post("/create_strategy", strategy).then(res => res.data) as Promise<SaveStrategyResponse>,
   getStrategies: () =>
     client.get("/strategies").then(res => res.data) as Promise<SavedStrategy[]>,
+  
+  // Posts endpoints
+  addPost: (sid: string, body: string) =>
+    client.post("/posts", { sid, body }).then(res => res.data),
+  getPosts: () =>
+    client.get("/posts").then(res => res.data),
 }

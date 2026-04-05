@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../api/index';
 
 type ViewType = 'grid' | 'list';
 type SortBy = 'top' | 'new' | 'return' | 'discussed';
@@ -29,104 +30,12 @@ const INDICATORS = ['SMA', 'RSI', 'EMA', 'MACD', 'Bollinger Bands', 'Stochastic'
 const ASSETS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'BTC', 'ETH', 'GLD'];
 const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D'];
 
-const mockStrategies: PublishedStrategy[] = [
-  {
-    id: 's1',
-    name: 'Bollinger Band Squeeze',
-    username: 'TradingMaster92',
-    userId: '1',
-    avatar: '👤',
-    indicators: ['Bollinger Bands', 'SMA'],
-    bestRun: { asset: 'NVDA', timeframe: '1D', returnPct: 31.5, winRate: 64, sharpeRatio: 1.85 },
-    votes: 234,
-    comments: 18,
-    publishedDate: '2026-03-15'
-  },
-  {
-    id: 's2',
-    name: 'SMA Crossover Pro',
-    username: 'QuantJunkie',
-    userId: '2',
-    avatar: '👨‍💼',
-    indicators: ['SMA'],
-    bestRun: { asset: 'AAPL', timeframe: '1D', returnPct: 24.5, winRate: 58, sharpeRatio: 1.42 },
-    votes: 156,
-    comments: 12,
-    publishedDate: '2026-03-10'
-  },
-  {
-    id: 's3',
-    name: 'RSI Mean Reversion',
-    username: 'CryptoWizard',
-    userId: '3',
-    avatar: '🧙',
-    indicators: ['RSI'],
-    bestRun: { asset: 'BTC', timeframe: '4H', returnPct: 18.2, winRate: 55, sharpeRatio: 0.98 },
-    votes: 89,
-    comments: 7,
-    publishedDate: '2026-02-28'
-  },
-  {
-    id: 's4',
-    name: 'Multi-MA Support',
-    username: 'StrategySeeker',
-    userId: '4',
-    avatar: '🔍',
-    indicators: ['EMA', 'SMA'],
-    bestRun: { asset: 'SPY', timeframe: '4H', returnPct: 42.1, winRate: 62, sharpeRatio: 2.15 },
-    votes: 812,
-    comments: 45,
-    publishedDate: '2026-03-20'
-  },
-  {
-    id: 's5',
-    name: 'MACD Momentum',
-    username: 'MarketAlpha',
-    userId: '5',
-    avatar: '📊',
-    indicators: ['MACD'],
-    bestRun: { asset: 'MSFT', timeframe: '1D', returnPct: 28.3, winRate: 60, sharpeRatio: 1.72 },
-    votes: 345,
-    comments: 23,
-    publishedDate: '2026-03-18'
-  },
-  {
-    id: 's6',
-    name: 'Stochastic Overbought',
-    username: 'TrendFollower',
-    userId: '6',
-    avatar: '📈',
-    indicators: ['Stochastic', 'RSI'],
-    bestRun: { asset: 'TSLA', timeframe: '1H', returnPct: 15.7, winRate: 52, sharpeRatio: 0.87 },
-    votes: 67,
-    comments: 5,
-    publishedDate: '2026-03-12'
-  },
-  {
-    id: 's7',
-    name: 'ATR Breakout',
-    username: 'VolatilityHunter',
-    userId: '7',
-    avatar: '💨',
-    indicators: ['ATR', 'SMA'],
-    bestRun: { asset: 'ETH', timeframe: '4H', returnPct: 35.2, winRate: 58, sharpeRatio: 1.91 },
-    votes: 421,
-    comments: 31,
-    publishedDate: '2026-03-19'
-  },
-  {
-    id: 's8',
-    name: 'EMA Confluence',
-    username: 'TradingMaster92',
-    userId: '1',
-    avatar: '👤',
-    indicators: ['EMA'],
-    bestRun: { asset: 'GLD', timeframe: '1D', returnPct: 12.4, winRate: 56, sharpeRatio: 0.76 },
-    votes: 123,
-    comments: 9,
-    publishedDate: '2026-03-08'
-  }
-];
+// Placeholder values for fields not yet in backend
+const PLACEHOLDER_STRATEGIES = {
+  avatar: '👤',
+  indicators: ['Bollinger Bands', 'SMA'],
+  bestRun: { asset: 'NVDA', timeframe: '1D', returnPct: 31.5, winRate: 64, sharpeRatio: 1.85 }
+};
 
 export default function ExplorePage() {
   const navigate = useNavigate();
@@ -138,10 +47,43 @@ export default function ExplorePage() {
   const [minReturn, setMinReturn] = useState(0);
   const [minVotes, setMinVotes] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [strategies, setStrategies] = useState<PublishedStrategy[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch posts from backend
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        const posts = await api.getPosts();
+        // Transform backend posts to PublishedStrategy format with placeholder values
+        const transformedStrategies: PublishedStrategy[] = posts.map((post: any) => ({
+          id: post.id,
+          name: post.strategy?.name || 'Unknown Strategy',
+          username: post.user?.username || 'Anonymous',
+          userId: post.user?.uid || 'unknown',
+          avatar: PLACEHOLDER_STRATEGIES.avatar,
+          indicators: PLACEHOLDER_STRATEGIES.indicators,
+          bestRun: PLACEHOLDER_STRATEGIES.bestRun,
+          votes: post.votes || 0,
+          comments: post.comments || 0,
+          publishedDate: post.published_date || new Date().toISOString()
+        }));
+        setStrategies(transformedStrategies);
+      } catch (err) {
+        console.error('Error fetching posts:', err);
+        setStrategies([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   // Filtering and sorting logic
   const filtered = useMemo(() => {
-    let result = mockStrategies.filter((strategy) => {
+    let result = strategies.filter((strategy) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -203,7 +145,7 @@ export default function ExplorePage() {
     }
 
     return result;
-  }, [searchQuery, selectedIndicators, selectedAssets, selectedTimeframes, minReturn, minVotes, sortBy]);
+  }, [searchQuery, selectedIndicators, selectedAssets, selectedTimeframes, minReturn, minVotes, sortBy, strategies]);
 
   const toggleIndicator = (indicator: string) => {
     setSelectedIndicators((prev) =>
@@ -396,8 +338,22 @@ export default function ExplorePage() {
               ))}
             </div>
 
-            {/* Feed */}
-            {filtered.length > 0 ? (
+            {/* Loading State */}
+            {isLoading ? (
+              <div className="space-y-4 p-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="bg-base-100/30 rounded-lg p-4 animate-pulse">
+                    <div className="h-4 bg-base-300 rounded w-1/4 mb-3"></div>
+                    <div className="h-5 bg-base-300 rounded w-2/3 mb-3"></div>
+                    <div className="flex gap-2 mb-3">
+                      <div className="h-6 bg-base-300 rounded-full w-24"></div>
+                      <div className="h-6 bg-base-300 rounded-full w-24"></div>
+                    </div>
+                    <div className="h-4 bg-base-300 rounded w-full"></div>
+                  </div>
+                ))}
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="space-y-0 divide-y divide-base-300"
               >
                 {filtered.map((strategy) => (
@@ -509,6 +465,9 @@ export default function ExplorePage() {
                   </div>
                 ))}
               </div>
+            ) : isLoading ? (
+              // Loading state already displayed above
+              null
             ) : (
               <div className="flex flex-col items-center justify-center py-16 px-4">
                 <p className="text-base-content/70 mb-4 text-center">No strategies match your filters.</p>
