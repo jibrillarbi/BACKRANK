@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useSaveStrategy } from '../api/useAuth';
+import { useStrategy } from '../contexts/StrategyContext';
 import { useState } from 'react';
 
 interface BacktestData {
@@ -83,9 +84,11 @@ const EquityCurve = ({ data }: { data: number[] }) => {
 export default function BacktestResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setRules } = useStrategy();
   const state = location.state as LocationState | null;
   const { mutate: saveStrategy, isPending: isSaving } = useSaveStrategy();
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'duplicate'; text: string } | null>(null);
 
   const handleSaveStrategy = () => {
     if (!state) return;
@@ -98,9 +101,19 @@ export default function BacktestResultsPage() {
         is_published: false
       },
       {
-        onSuccess: () => {
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
+        onSuccess: (response: any) => {
+          if (response.message) {
+            setSaveMessage({
+              type: 'duplicate',
+              text: response.message
+            });
+          } else {
+            setSaveMessage({
+              type: 'success',
+              text: 'Strategy saved successfully!'
+            });
+          }
+          setTimeout(() => setSaveMessage(null), 4000);
         }
       }
     );
@@ -109,12 +122,6 @@ export default function BacktestResultsPage() {
   if (!state) {
     return (
       <div className="min-h-screen bg-black text-base-content p-8">
-        <button
-          onClick={() => navigate('/deploy')}
-          className="flex items-center gap-2 text-blue-400 hover:text-blue-300 mb-8"
-        >
-          <ArrowLeft size={20} /> Back to Backtest
-        </button>
         <div className="text-center py-12">
           <p className="text-xl text-base-content/70">No results found. Run a backtest first.</p>
         </div>
@@ -145,13 +152,6 @@ export default function BacktestResultsPage() {
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
-        <button
-          onClick={() => navigate('/deploy')}
-          className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors mb-4"
-        >
-          <ArrowLeft size={20} /> Back to Backtest
-        </button>
-
         <header>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-4">
             Backtest Results
@@ -339,22 +339,25 @@ export default function BacktestResultsPage() {
 
         {/* Action Buttons */}
         <div className="flex gap-4 justify-end pt-4">
-          {saveSuccess && (
-            <div className="px-4 py-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-medium">
-              Strategy saved successfully!
+          {saveMessage && (
+            <div className={`px-4 py-3 rounded-lg border font-medium ${
+              saveMessage.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+            }`}>
+              {saveMessage.text}
             </div>
           )}
           <button
-            onClick={() => navigate('/deploy')}
-            className="px-6 py-3 rounded-lg border border-base-300 bg-base-300 text-white hover:bg-base-300 transition-colors font-medium"
-          >
-            Run Another Backtest
-          </button>
-          <button
-            onClick={() => navigate('/strategy')}
+            onClick={() => {
+              if (state) {
+                setRules(state.strategy.NAME, state.strategy.ENTRY, state.strategy.EXIT);
+              }
+              navigate('/strategy/edit');
+            }}
             className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
           >
-            Edit Strategy
+            Edit Conditions
           </button>
           <button
             onClick={handleSaveStrategy}

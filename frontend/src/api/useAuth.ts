@@ -1,5 +1,5 @@
-import { useMutation } from "@tanstack/react-query"
-import { api, type LoginRequest, type RegisterRequest, type AuthResponse, type Strategy } from "./index"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { api, type LoginRequest, type RegisterRequest, type AuthResponse, type Strategy, type SavedStrategy, type SaveStrategyResponse } from "./index"
 
 export const useLogin = () => {
   return useMutation<AuthResponse, Error, LoginRequest>({
@@ -46,7 +46,7 @@ export const getCurrentUser = () => {
 }
 
 export const useSaveStrategy = () => {
-  return useMutation<any, Error, Strategy>({
+  return useMutation<SaveStrategyResponse, Error, Strategy>({
     mutationFn: (data: Strategy) => api.saveStrategy(data),
   })
 }
@@ -58,5 +58,13 @@ export const isLoggedIn = () => {
 export const useCheckSession = () => {
   return useMutation({
     mutationFn: () => api.getCurrentUser(),
+  })
+}
+
+export const useGetStrategies = () => {
+  return useQuery<SavedStrategy[]>({
+    queryKey: ['strategies'],
+    queryFn: () => api.getStrategies(),
+    enabled: isLoggedIn(),
   })
 }

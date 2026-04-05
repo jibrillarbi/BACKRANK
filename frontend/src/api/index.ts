@@ -7,6 +7,17 @@ export interface Strategy {
   is_published: boolean
 }
 
+export interface SavedStrategy {
+  sid: number
+  uid: string
+  strategy: Strategy
+}
+
+export interface SaveStrategyResponse {
+  message?: string
+  strategy?: Strategy
+}
+
 export interface StrategyBacktest {
   NAME: string
   ENTRY: string
@@ -50,6 +61,9 @@ export const api = {
   logout: () =>
     client.get("/logout").then(res => res.data),
   
+  // Strategy endpoints
   saveStrategy: (strategy: Strategy) =>
-    client.post("/create_strategy", strategy).then(res => res.data),
+    client.post("/create_strategy", strategy).then(res => res.data) as Promise<SaveStrategyResponse>,
+  getStrategies: () =>
+    client.get("/strategies").then(res => res.data) as Promise<SavedStrategy[]>,
 }

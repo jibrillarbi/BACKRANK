@@ -81,19 +81,45 @@ def get_current_user_info(user_id: str = Depends(get_current_user)):
     return {"uid": user_id, "authenticated": True}
 
 @app.post("/create_strategy")
-def save_strategy(strategy: Strategy,user_id: str= Depends(get_current_user)):
+def save_strategy(strategy: Strategy, user_id: str = Depends(get_current_user)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    try: 
+    try:
+        
+        existing = supabase.table("strategy").select("*").eq("uid", user_id).eq("entry_rule", strategy.entry_rule).eq("exit_rule", strategy.exit_rule).execute()
+        
+        if existing.data:
+            existing_strategy = existing.data[0]
+            return {
+                "message": f"Strategy is already saved as: {existing_strategy['name']}",
+                "strategy": existing_strategy
+            }
+        
         strategy_data = strategy.model_dump()
         strategy_data["uid"] = user_id
         res = supabase.table("strategy").insert(strategy_data).execute()
 
+        strategy_id = res.data[0]["id"]
+        supabase.table("saved_strategies").insert({
+            "uid": user_id,
+            "sid": strategy_id
+        }).execute()
+
+        return res.data[0]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error Saving strategy: {str(e)}")
-
-
-
+@app.get("/strategies")
+def get_saved_strategies(user_id: str = Depends(get_current_user)):
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        res = supabase.table("saved_strategies") \
+            .select("*, strategy(*)") \
+            .eq("uid", user_id) \
+            .execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching saved strategies: {str(e)}")
 
 @app.post("/run_back")
 def get_strategy_evaluation(strategy: StrategyIn):
