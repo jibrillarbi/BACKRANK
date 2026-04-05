@@ -11,37 +11,30 @@ interface BacktestRun {
   returnPct: number;
   winRate: number;
   sharpeRatio: number;
+  maxDd: number;
 }
 
 interface PublishedStrategy {
   id: string;
   name: string;
   username: string;
-  userId: string;
-  avatar: string;
-  indicators: string[];
-  bestRun: BacktestRun;
-  votes: number;
+  body: string;
+  asset: string;
+  timeframe: string;
+  direction: string;
+  backtest: BacktestRun;
+  likes: number;
   comments: number;
   publishedDate: string;
 }
 
-const INDICATORS = ['SMA', 'RSI', 'EMA', 'MACD', 'Bollinger Bands', 'Stochastic', 'ATR'];
 const ASSETS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'BTC', 'ETH', 'GLD'];
 const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D'];
-
-// Placeholder values for fields not yet in backend
-const PLACEHOLDER_STRATEGIES = {
-  avatar: '👤',
-  indicators: ['Bollinger Bands', 'SMA'],
-  bestRun: { asset: 'NVDA', timeframe: '1D', returnPct: 31.5, winRate: 64, sharpeRatio: 1.85 }
-};
 
 export default function ExplorePage() {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<SortBy>('top');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [selectedTimeframes, setSelectedTimeframes] = useState<string[]>([]);
   const [minReturn, setMinReturn] = useState(0);
@@ -56,19 +49,30 @@ export default function ExplorePage() {
       setIsLoading(true);
       try {
         const posts = await api.getPosts();
-        // Transform backend posts to PublishedStrategy format with placeholder values
-        const transformedStrategies: PublishedStrategy[] = posts.map((post: any) => ({
-          id: post.id,
-          name: post.strategy?.name || 'Unknown Strategy',
-          username: post.user?.username || 'Anonymous',
-          userId: post.user?.uid || 'unknown',
-          avatar: PLACEHOLDER_STRATEGIES.avatar,
-          indicators: PLACEHOLDER_STRATEGIES.indicators,
-          bestRun: PLACEHOLDER_STRATEGIES.bestRun,
-          votes: post.votes || 0,
-          comments: post.comments || 0,
-          publishedDate: post.published_date || new Date().toISOString()
-        }));
+        // Transform backend posts to PublishedStrategy format
+        const transformedStrategies: PublishedStrategy[] = posts.map((post: any) => {
+          const backtest = post.deployment?.backtest_data?.[0];
+          return {
+            id: post.id,
+            name: post.deployment?.strategy?.name || 'Unknown Strategy',
+            username: post.user?.username || 'Anonymous',
+            body: post.body || '',
+            asset: post.deployment?.asset || 'Unknown',
+            timeframe: post.deployment?.timeframe || '1D',
+            direction: post.deployment?.direction || 'Long',
+            backtest: {
+              asset: post.deployment?.asset || 'Unknown',
+              timeframe: post.deployment?.timeframe || '1D',
+              returnPct: backtest?.total_return_pct || 0,
+              winRate: backtest?.win_rate || 0,
+              sharpeRatio: backtest?.sharpe_ratio || 0,
+              maxDd: backtest?.max_dd || 0
+            },
+            likes: post.likes || 0,
+            comments: post.comments || 0,
+            publishedDate: post.created_at || new Date().toISOString()
+          };
+        });
         setStrategies(transformedStrategies);
       } catch (err) {
         console.error('Error fetching posts:', err);
@@ -95,33 +99,26 @@ export default function ExplorePage() {
         }
       }
 
-      // Indicator filter
-      if (selectedIndicators.length > 0) {
-        if (!selectedIndicators.some((ind) => strategy.indicators.includes(ind))) {
-          return false;
-        }
-      }
-
       // Asset filter
-      if (selectedAssets.length > 0 && !selectedAssets.includes(strategy.bestRun.asset)) {
+      if (selectedAssets.length > 0 && !selectedAssets.includes(strategy.asset)) {
         return false;
       }
 
       // Timeframe filter
       if (
         selectedTimeframes.length > 0 &&
-        !selectedTimeframes.includes(strategy.bestRun.timeframe)
+        !selectedTimeframes.includes(strategy.timeframe)
       ) {
         return false;
       }
 
       // Return filter
-      if (strategy.bestRun.returnPct < minReturn) {
+      if (strategy.backtest.returnPct < minReturn) {
         return false;
       }
 
       // Vote filter
-      if (strategy.votes < minVotes) {
+      if (strategy.likes < minVotes) {
         return false;
       }
 
@@ -131,13 +128,13 @@ export default function ExplorePage() {
     // Sorting
     switch (sortBy) {
       case 'top':
-        result.sort((a, b) => b.votes - a.votes);
+        result.sort((a, b) => b.likes - a.likes);
         break;
       case 'new':
         result.sort((a, b) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
         break;
       case 'return':
-        result.sort((a, b) => b.bestRun.returnPct - a.bestRun.returnPct);
+        result.sort((a, b) => b.backtest.returnPct - a.backtest.returnPct);
         break;
       case 'discussed':
         result.sort((a, b) => b.comments - a.comments);
@@ -145,13 +142,7 @@ export default function ExplorePage() {
     }
 
     return result;
-  }, [searchQuery, selectedIndicators, selectedAssets, selectedTimeframes, minReturn, minVotes, sortBy, strategies]);
-
-  const toggleIndicator = (indicator: string) => {
-    setSelectedIndicators((prev) =>
-      prev.includes(indicator) ? prev.filter((i) => i !== indicator) : [...prev, indicator]
-    );
-  };
+  }, [searchQuery, selectedAssets, selectedTimeframes, minReturn, minVotes, sortBy, strategies]);
 
   const toggleAsset = (asset: string) => {
     setSelectedAssets((prev) =>
@@ -167,7 +158,6 @@ export default function ExplorePage() {
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedIndicators([]);
     setSelectedAssets([]);
     setSelectedTimeframes([]);
     setMinReturn(0);
@@ -175,7 +165,6 @@ export default function ExplorePage() {
   };
 
   const hasActiveFilters =
-    selectedIndicators.length > 0 ||
     selectedAssets.length > 0 ||
     selectedTimeframes.length > 0 ||
     minReturn > 0 ||
@@ -220,24 +209,6 @@ export default function ExplorePage() {
                   showFilters ? 'block' : 'hidden'
                 } lg:block p-4 space-y-6 border-b border-base-300 lg:border-b-0`}
               >
-                {/* Indicators */}
-                <div>
-                  <h3 className="font-semibold mb-3 text-white text-sm uppercase tracking-wide">Indicators</h3>
-                  <div className="space-y-2">
-                    {INDICATORS.map((ind) => (
-                      <label key={ind} className="flex items-center gap-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={selectedIndicators.includes(ind)}
-                          onChange={() => toggleIndicator(ind)}
-                          className="w-4 h-4 rounded border-base-300 bg-base-200"
-                        />
-                        <span className="text-sm text-base-content/80 group-hover:text-white transition-colors">{ind}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Assets */}
                 <div>
                   <h3 className="font-semibold mb-3 text-white text-sm uppercase tracking-wide">Assets</h3>
@@ -365,7 +336,7 @@ export default function ExplorePage() {
                     {/* Author Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="text-2xl flex-shrink-0">{strategy.avatar}</div>
+                        <div className="text-2xl flex-shrink-0">📊</div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <p
@@ -377,7 +348,6 @@ export default function ExplorePage() {
                             >
                               {strategy.username}
                             </p>
-                            <span className="text-base-content/50 text-sm">@{strategy.userId}</span>
                           </div>
                           <p className="text-xs text-base-content/60">
                             {new Date(strategy.publishedDate).toLocaleDateString('en-US', {
@@ -400,40 +370,40 @@ export default function ExplorePage() {
                     </div>
 
                     {/* Strategy Title */}
-                    <h3 className="text-lg font-bold text-white mb-3 group-hover:text-blue-400 transition-colors leading-snug">
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors leading-snug">
                       {strategy.name}
                     </h3>
 
-                    {/* Indicators & Asset Info */}
+                    {/* Asset Info */}
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {strategy.indicators.map((ind) => (
-                        <span key={ind} className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs font-medium rounded-full border border-blue-500/30">
-                          {ind}
-                        </span>
-                      ))}
                       <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/30">
-                        {strategy.bestRun.asset} • {strategy.bestRun.timeframe}
+                        {strategy.asset} • {strategy.timeframe} • {strategy.direction}
                       </span>
                     </div>
+
+                    {/* Description */}
+                    <p className="text-sm text-base-content/70 mb-3 line-clamp-2">{strategy.body}</p>
 
                     {/* Performance Metrics */}
                     <div className="bg-base-200/30 rounded-lg p-3 mb-3 border border-base-300">
                       <div className="grid grid-cols-4 gap-2">
                         <div>
                           <p className="text-xs text-base-content/60 mb-1">Return</p>
-                          <p className="text-sm font-bold text-emerald-400">+{strategy.bestRun.returnPct}%</p>
+                          <p className={`text-sm font-bold ${strategy.backtest.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {strategy.backtest.returnPct >= 0 ? '+' : ''}{strategy.backtest.returnPct.toFixed(2)}%
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs text-base-content/60 mb-1">Win Rate</p>
-                          <p className="text-sm font-bold text-blue-400">{strategy.bestRun.winRate}%</p>
+                          <p className="text-sm font-bold text-blue-400">{strategy.backtest.winRate.toFixed(2)}%</p>
                         </div>
                         <div>
                           <p className="text-xs text-base-content/60 mb-1">Sharpe</p>
-                          <p className="text-sm font-bold text-amber-400">{strategy.bestRun.sharpeRatio}</p>
+                          <p className="text-sm font-bold text-amber-400">{strategy.backtest.sharpeRatio.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-base-content/60 mb-1">Score</p>
-                          <p className="text-sm font-bold text-violet-400">{Math.round(strategy.votes / 10)}</p>
+                          <p className="text-xs text-base-content/60 mb-1">Max DD</p>
+                          <p className="text-sm font-bold text-red-400">{(strategy.backtest.maxDd * 100).toFixed(2)}%</p>
                         </div>
                       </div>
                     </div>
@@ -446,7 +416,7 @@ export default function ExplorePage() {
                           className="flex items-center gap-2 hover:text-emerald-400 transition-colors group/btn"
                         >
                           <span className="group-hover/btn:bg-emerald-500/20 px-2 py-1 rounded">👍</span>
-                          <span className="text-xs">{strategy.votes}</span>
+                          <span className="text-xs">{strategy.likes}</span>
                         </button>
                         <button
                           onClick={(e) => e.stopPropagation()}
@@ -456,11 +426,6 @@ export default function ExplorePage() {
                           <span className="text-xs">{strategy.comments}</span>
                         </button>
                       </div>
-                      {strategy.votes > 500 && (
-                        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold rounded-full border border-amber-500/30">
-                          🔥 Trending
-                        </span>
-                      )}
                     </div>
                   </div>
                 ))}
