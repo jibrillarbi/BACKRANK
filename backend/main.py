@@ -53,7 +53,7 @@ class StrategyIn(BaseModel):
     SL: str
     TP: str
 class Postr(BaseModel):
-    sid: str
+    did: str
     body: str
 
 class Strategy(BaseModel):
@@ -62,6 +62,17 @@ class Strategy(BaseModel):
     exit_rule: str
     is_published: bool = False
 
+class Backtestr(BaseModel): 
+    trp: float  
+    sr: float   
+    maxdd: float
+    wr: float  
+    tt: float  
+    fc: float  
+
+class DeploymentPayload(BaseModel):
+    strategy: StrategyIn
+    backtest: Backtestr
 
 class LoginRequest(BaseModel):
     email: str
@@ -227,10 +238,13 @@ def logout():
     return response
 
 @app.post("/deployment")
-def add_config(strat: StrategyIn, user_id: str = Depends(get_current_user)):
+def add_config(payload: DeploymentPayload, user_id: str = Depends(get_current_user)):
     if not user_id: 
         raise HTTPException(status_code=401,detail="Not logged in! ")
     try:
+        strat = payload.strategy
+        bt = payload.backtest
+        
         s=Strategy(name = strat.NAME, entry_rule=strat.ENTRY, exit_rule=strat.EXIT)
         existing = save_strategy(s,user_id)
         id=existing["strategy_id"]
@@ -264,44 +278,78 @@ def add_config(strat: StrategyIn, user_id: str = Depends(get_current_user)):
             "direction": dep_data["DIRECTION"],
             "sizing": dep_data["SIZE"]
         }).execute()
+        
+        deployment_id = res.data[0]["id"]
+        add_backtest_result(bt, deployment_id, user_id)
+        
         return res.data[0]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error saving deployment {str(e)}")
-    
-@app.get("/deployment")
+def add_backtest_result(data: Backtestr, dep_id: str, user_id: str):
+    try:
+        res = supabase.table("backtest_data").insert({
+            "did": dep_id,
+            "total_return_pct": data.trp,
+            "sharpe_ratio": data.sr,
+            "max_dd": data.maxdd,
+            "win_rate": data.wr,
+            "total_trades": data.tt,
+            "final_capital": data.fc
+        }).execute()
+        return res.data[0]
+    except Exception as e:
+        print(f"Error saving Backtest Results: {str(e)}")
+        return None
+
+
+
+
+
+
+@app.get("/strat_dep")
 def get_dep_strat(strat_id: str, user_id: str = Depends(get_current_user)):
     if not user_id: 
         raise HTTPException(status_code=401,detail="Not logged in! ")
     
     try:
-
-        res = supabase.table("deployment").select("*").eq("sid", strat_id).execute()
+        res = supabase.table("deployment").select("*, backtest_data(*)").eq("sid", strat_id).execute()
         return res.data
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error Posting {str(e)}")
+
+@app.get("/all_deployments")
+def get_all_deployments(user_id: str = Depends(get_current_user)):
+    if not user_id: 
+        raise HTTPException(status_code=401,detail="Not logged in! ")
     
+    try:
+        res = supabase.table("deployment").select("*, backtest_data(*), strategy(name)").eq("uid", user_id).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching deployments: {str(e)}")
+
 @app.post("/posts")
 def add_post(data: Postr, user_id: str = Depends(get_current_user)):
     if not user_id: 
         raise HTTPException(status_code=401,detail="Not logged in! ")
     try:
         
-        existing = supabase.table("strategy").select("*").eq("is_published", True).eq("id",data.sid).execute()
+        existing = supabase.table("deployment").select("*").eq("is_published", True).eq("id",data.did).execute()
         
         if existing.data:
-            supabase.table("strategy").update({"is_published": True}).eq("id", data.sid).execute()
+            supabase.table("deployment").update({"is_published": True}).eq("id", data.did).execute()
             return {
-                "message": f"Post for this strategy already made. Please edit or delete"
+                "message": f"Post for this deployment already made. Please edit or delete"
             }
         
         post_data = data.model_dump()
         res =  supabase.table("posts").insert({
             "uid": user_id,
-            "sid": post_data["sid"],
+            "did": post_data["did"],
             "body": post_data["body"]
         }).execute()
         
-        supabase.table("strategy").update({"is_published": True}).eq("id", post_data["sid"]).execute()
+        supabase.table("deployment").update({"is_published": True}).eq("id", post_data["did"]).execute()
 
         return res.data[0]
     except Exception as e:
@@ -312,10 +360,11 @@ def add_post(data: Postr, user_id: str = Depends(get_current_user)):
 def get_posts():
     try:
         res = supabase.table("posts") \
-            .select("id, body, user(username, uid), strategy(name), likes, comments, created_at") \
+            .select("id, body, created_at, likes, comments, user(username), deployment(asset, timeframe, direction, strategy(name), backtest_data(total_return_pct, win_rate, sharpe_ratio, max_dd))") \
             .execute()
-        
         
         return res.data
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error fetching posts: {str(e)}")
+
+
