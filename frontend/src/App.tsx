@@ -13,7 +13,6 @@ import Test from "./pages/Test"
 import LogoutPage from "./pages/LogoutPage"
 import UserProfilePage from "./pages/UserProfilePage"
 import ExplorePage from "./pages/ExplorePage"
-import StrategyDetailPage from "./pages/StrategyDetailPage"
 import LeaderboardPage from "./pages/LeaderboardPage"
 import SettingsPage from "./pages/SettingsPage"
 import NotificationsPage from "./pages/NotificationsPage"
@@ -58,7 +57,11 @@ function App() {
           <UserProfilePage />
         } />
         <Route path="/backtest-results" element={
-          <BacktestResultsPage />
+          <div className="mt-16">
+            <StrategyProvider>
+              <BacktestResultsPage />
+            </StrategyProvider>
+          </div>
         } />
         <Route path="/explore" element={
           <ExplorePage />

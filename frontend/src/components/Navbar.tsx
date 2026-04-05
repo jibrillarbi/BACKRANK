@@ -74,12 +74,12 @@ export default function Navbar() {
               Leaderboard
             </button>
 
-            {/* New Strategy Button */}
+            {/* Backtest Button */}
             <button
-              onClick={() => navigate('/strategy/edit')}
+              onClick={() => navigate('/strategy')}
               className="btn btn-primary btn-sm hidden sm:flex"
             >
-              New Strategy
+              Backtest
             </button>
           </>
         )}
