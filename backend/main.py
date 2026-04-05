@@ -60,7 +60,7 @@ class Strategy(BaseModel):
     name: str
     entry_rule: str
     exit_rule: str
-    is_published: bool
+    is_published: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -98,6 +98,7 @@ def save_strategy(strategy: Strategy, user_id: str = Depends(get_current_user)):
             existing_strategy = existing.data[0]
             return {
                 "message": f"Strategy is already saved as: {existing_strategy['name']}",
+                "strategy_id": existing_strategy['id'],
                 "strategy": existing_strategy
             }
         
@@ -111,7 +112,9 @@ def save_strategy(strategy: Strategy, user_id: str = Depends(get_current_user)):
             "sid": strategy_id
         }).execute()
 
-        return res.data[0]
+        return {
+            "strategy_id": strategy_id
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error Saving strategy: {str(e)}")
 @app.get("/strategies")
@@ -222,16 +225,71 @@ def logout():
         samesite="lax"
     )
     return response
+
+@app.post("/deployment")
+def add_config(strat: StrategyIn, user_id: str = Depends(get_current_user)):
+    if not user_id: 
+        raise HTTPException(status_code=401,detail="Not logged in! ")
+    try:
+        s=Strategy(name = strat.NAME, entry_rule=strat.ENTRY, exit_rule=strat.EXIT)
+        existing = save_strategy(s,user_id)
+        id=existing["strategy_id"]
+
+        dep_data = strat.model_dump()
+        sl = None if str(dep_data["SL"]) == 'None' else dep_data["SL"]
+        tp = None if str(dep_data["TP"]) == 'None' else dep_data["TP"]
+        query = (
+            supabase.table("deployment")
+            .select("*")
+            .eq("uid", user_id)
+            .eq("sid", id)
+            .eq("asset", dep_data["TICKER"])
+            .eq("timeframe", dep_data["TIMEFRAME"])
+            .eq("direction", dep_data["DIRECTION"])
+            .eq("sizing", dep_data["SIZE"])
+        )
+        query = query.is_("sl", "null") if sl is None else query.eq("sl", sl)
+        query = query.is_("tp", "null") if tp is None else query.eq("tp", tp)
+
+        if query.execute().data:
+            return {"message": "This exact deployment already exists. Please modify the parameters."}
+
+        res =  supabase.table("deployment").insert({
+            "uid": user_id,
+            "sid": id,
+            "asset": dep_data["TICKER"],
+            "timeframe": dep_data["TIMEFRAME"],
+            "sl": sl,
+            "tp": tp,
+            "direction": dep_data["DIRECTION"],
+            "sizing": dep_data["SIZE"]
+        }).execute()
+        return res.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error saving deployment {str(e)}")
+    
+@app.get("/deployment")
+def get_dep_strat(strat_id: str, user_id: str = Depends(get_current_user)):
+    if not user_id: 
+        raise HTTPException(status_code=401,detail="Not logged in! ")
+    
+    try:
+
+        res = supabase.table("deployment").select("*").eq("sid", strat_id).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error Posting {str(e)}")
+    
 @app.post("/posts")
 def add_post(data: Postr, user_id: str = Depends(get_current_user)):
     if not user_id: 
         raise HTTPException(status_code=401,detail="Not logged in! ")
     try:
         
-        existing = supabase.table("posts").select("*").eq("uid", user_id).eq("sid",data.sid).execute()
+        existing = supabase.table("strategy").select("*").eq("is_published", True).eq("id",data.sid).execute()
         
         if existing.data:
-            existing_strategy = existing.data[0]
+            supabase.table("strategy").update({"is_published": True}).eq("id", data.sid).execute()
             return {
                 "message": f"Post for this strategy already made. Please edit or delete"
             }
@@ -242,6 +300,8 @@ def add_post(data: Postr, user_id: str = Depends(get_current_user)):
             "sid": post_data["sid"],
             "body": post_data["body"]
         }).execute()
+        
+        supabase.table("strategy").update({"is_published": True}).eq("id", post_data["sid"]).execute()
 
         return res.data[0]
     except Exception as e:
@@ -254,6 +314,8 @@ def get_posts():
         res = supabase.table("posts") \
             .select("id, body, user(username, uid), strategy(name), likes, comments, created_at") \
             .execute()
+        
+        
         return res.data
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error fetching posts: {str(e)}")

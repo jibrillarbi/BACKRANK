@@ -72,4 +72,10 @@ export const api = {
     client.post("/posts", { sid, body }).then(res => res.data),
   getPosts: () =>
     client.get("/posts").then(res => res.data),
+  
+  // Deployment endpoints
+  deployStrategy: (config: StrategyBacktest) =>
+    client.post("/deployment", config).then(res => res.data),
+  getDeployments: (strategyId: string) =>
+    client.get("/deployment", { params: { strat_id: strategyId } }).then(res => res.data),
 }
