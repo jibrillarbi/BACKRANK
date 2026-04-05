@@ -1,8 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Zap } from 'lucide-react';
 import { useSaveStrategy } from '../api/useAuth';
 import { useStrategy } from '../contexts/StrategyContext';
 import { useState } from 'react';
+import { api } from '../api/index';
 
 interface BacktestData {
   pnl: number;
@@ -41,6 +42,9 @@ interface LocationState {
     DIRECTION: string;
     ENTRY: string;
     EXIT: string;
+    SIZE: string;
+    SL: string;
+    TP: string;
   };
 }
 
@@ -89,6 +93,8 @@ export default function BacktestResultsPage() {
   const { mutate: saveStrategy, isPending: isSaving } = useSaveStrategy();
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'duplicate'; text: string } | null>(null);
+  const [savingDeployment, setSavingDeployment] = useState(false);
+  const [deploymentMessage, setDeploymentMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleSaveStrategy = () => {
     if (!state) return;
@@ -117,6 +123,44 @@ export default function BacktestResultsPage() {
         }
       }
     );
+  };
+
+  const handleSaveDeployment = async () => {
+    if (!state) return;
+    
+    setSavingDeployment(true);
+    try {
+      const deploymentPayload = {
+        strategy: state.strategy,
+        backtest: {
+          trp: state.results.cagr,
+          sr: state.results.sharpe_ratio,
+          maxdd: state.results.max_drawdown,
+          wr: state.results.win_rate,
+          tt: state.results.number_of_trades,
+          fc: state.results.pnl
+        }
+      };
+      
+      const response = await api.deployStrategy(deploymentPayload);
+      console.log('Deployment response:', response);
+      
+      const messageText = response?.message || 'Deployment saved successfully!';
+      setDeploymentMessage({
+        type: 'success',
+        text: messageText
+      });
+      setTimeout(() => setDeploymentMessage(null), 4000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save deployment';
+      setDeploymentMessage({
+        type: 'error',
+        text: message
+      });
+      setTimeout(() => setDeploymentMessage(null), 4000);
+    } finally {
+      setSavingDeployment(false);
+    }
   };
 
   if (!state) {
@@ -338,34 +382,57 @@ export default function BacktestResultsPage() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-4 justify-end pt-4">
-          {saveMessage && (
-            <div className={`px-4 py-3 rounded-lg border font-medium ${
-              saveMessage.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-            }`}>
-              {saveMessage.text}
+        <div className="flex flex-col gap-4 pt-4">
+          {(saveMessage || deploymentMessage) && (
+            <div className="flex gap-4 justify-end flex-wrap">
+              {saveMessage && (
+                <div className={`px-4 py-3 rounded-lg border font-medium ${
+                  saveMessage.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                }`}>
+                  {saveMessage.text}
+                </div>
+              )}
+              {deploymentMessage && (
+                <div className={`px-4 py-3 rounded-lg border font-medium ${
+                  deploymentMessage.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  {deploymentMessage.text}
+                </div>
+              )}
             </div>
           )}
-          <button
-            onClick={() => {
-              if (state) {
-                setRules(state.strategy.NAME, state.strategy.ENTRY, state.strategy.EXIT);
-              }
-              navigate('/strategy/edit');
-            }}
-            className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
-          >
-            Edit Conditions
-          </button>
-          <button
-            onClick={handleSaveStrategy}
-            disabled={isSaving}
-            className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-medium disabled:bg-gray-500 disabled:cursor-not-allowed"
-          >
-            {isSaving ? 'Saving...' : 'Save Strategy to Profile'}
-          </button>
+          <div className="flex gap-4 justify-end flex-wrap">
+            <button
+              onClick={() => {
+                if (state) {
+                  setRules(state.strategy.NAME, state.strategy.ENTRY, state.strategy.EXIT);
+                }
+                navigate('/strategy/edit');
+              }}
+              className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
+            >
+              Edit Conditions
+            </button>
+            <button
+              onClick={handleSaveDeployment}
+              disabled={savingDeployment}
+              className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors font-medium disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Zap size={18} />
+              {savingDeployment ? 'Saving...' : 'Save Deployment'}
+            </button>
+            <button
+              onClick={handleSaveStrategy}
+              disabled={isSaving}
+              className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-medium disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Saving...' : 'Save Strategy to Profile'}
+            </button>
+          </div>
         </div>
 
       </div>
