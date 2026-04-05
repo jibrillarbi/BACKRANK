@@ -73,6 +73,12 @@ export default function Navbar() {
             >
               Leaderboard
             </button>
+            <button
+              onClick={() => navigate('/create-post')}
+              className={`btn btn-ghost btn-sm ${isActive('/create-post') ? 'btn-active' : ''}`}
+            >
+              Share
+            </button>
 
             {/* Backtest Button */}
             <button
