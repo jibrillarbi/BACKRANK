@@ -5,6 +5,8 @@ import LandingPage from "./pages/LandingPage"
 import DashboardPage from "./pages/DashboardPage"
 import MyStrategiesPage from "./pages/MyStrategiesPage"
 import DeployStrategyPage from "./pages/DeployStrategyPage"
+import DeploymentsPage from "./pages/DeploymentsPage"
+import CreatePostPage from "./pages/CreatePostPage"
 import StrategyPage from "./pages/StrategyPage"
 import BacktestResultsPage from "./pages/BacktestResultsPage"
 import LoginPage from "./pages/LoginPage"
@@ -20,6 +22,7 @@ function App() {
   return (
     <div className="text-base-content">
       <Navbar />
+      <div className="pt-16">
       <Routes>
         <Route path="/landing" element={
           <LandingPage />
@@ -38,6 +41,12 @@ function App() {
         } />
         <Route path="/strategies" element={
           <MyStrategiesPage />
+        } />
+        <Route path="/deployments/:strategyId" element={
+          <DeploymentsPage />
+        } />
+        <Route path="/create-post" element={
+          <CreatePostPage />
         } />
         <Route path="/strategy/edit" element={
           <div className="mt-16">
@@ -79,6 +88,7 @@ function App() {
           <Test /> 
         }/>
       </Routes>
+      </div>
     </div>
   )
 }

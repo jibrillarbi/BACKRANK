@@ -30,6 +30,20 @@ export interface StrategyBacktest {
   TP: string
 }
 
+export interface BacktestMetrics {
+  trp: number  
+  sr: number   
+  maxdd: number 
+  wr: number    
+  tt: number    
+  fc: number 
+}
+
+export interface DeploymentPayload {
+  strategy: StrategyBacktest
+  backtest: BacktestMetrics
+}
+
 export interface LoginRequest {
   email: string
   password: string
@@ -68,14 +82,16 @@ export const api = {
     client.get("/strategies").then(res => res.data) as Promise<SavedStrategy[]>,
   
   // Posts endpoints
-  addPost: (sid: string, body: string) =>
-    client.post("/posts", { sid, body }).then(res => res.data),
+  addPost: (did: string, body: string) =>
+    client.post("/posts", { did, body }).then(res => res.data),
   getPosts: () =>
     client.get("/posts").then(res => res.data),
   
   // Deployment endpoints
-  deployStrategy: (config: StrategyBacktest) =>
-    client.post("/deployment", config).then(res => res.data),
+  deployStrategy: (payload: DeploymentPayload) =>
+    client.post("/deployment", payload).then(res => res.data),
   getDeployments: (strategyId: string) =>
-    client.get("/deployment", { params: { strat_id: strategyId } }).then(res => res.data),
+    client.get("/strat_dep", { params: { strat_id: strategyId } }).then(res => res.data),
+  getAllDeployments: () =>
+    client.get("/all_deployments").then(res => res.data),
 }
