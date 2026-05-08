@@ -2,72 +2,55 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/index';
 
-type ViewType = 'grid' | 'list';
-type SortBy = 'top' | 'new' | 'return' | 'discussed';
+type SortBy = 'new' | 'return' | 'votes' | 'winrate';
 
-interface BacktestRun {
-  asset: string;
-  timeframe: string;
-  returnPct: number;
-  winRate: number;
-  sharpeRatio: number;
-  maxDd: number;
-}
-
-interface PublishedStrategy {
+interface Strategy {
   id: string;
   name: string;
-  username: string;
-  body: string;
+  author: string;
   asset: string;
   timeframe: string;
   direction: string;
-  backtest: BacktestRun;
+  return: number;
+  winRate: number;
+  sharpeRatio: number;
+  trades: number;
   likes: number;
   comments: number;
-  publishedDate: string;
+  publishedDate?: string;
 }
 
-const ASSETS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'BTC', 'ETH', 'GLD'];
-const TIMEFRAMES = ['1M', '5M', '15M', '1H', '4H', '1D'];
+const ASSETS = ['AAPL', 'MSFT', 'NVDA', 'TSLA'];
+const TIMEFRAMES = ['1m', '5m', '15m', '1h', '1d'];
 
 export default function ExplorePage() {
   const navigate = useNavigate();
-  const [sortBy, setSortBy] = useState<SortBy>('top');
+  const [sortBy, setSortBy] = useState<SortBy>('new');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [selectedTimeframes, setSelectedTimeframes] = useState<string[]>([]);
-  const [minReturn, setMinReturn] = useState(0);
-  const [minVotes, setMinVotes] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
-  const [strategies, setStrategies] = useState<PublishedStrategy[]>([]);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch posts from backend
+  // Fetch strategies from backend
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchStrategies = async () => {
       setIsLoading(true);
       try {
         const posts = await api.getPosts();
-        // Transform backend posts to PublishedStrategy format
-        const transformedStrategies: PublishedStrategy[] = posts.map((post: any) => {
-          const backtest = post.deployment?.backtest_data?.[0];
+        const transformedStrategies: Strategy[] = posts.map((post: any) => {
+          const backtest = post.deployment?.backtest_data?.[0] || {};
           return {
             id: post.id,
-            name: post.deployment?.strategy?.name || 'Unknown Strategy',
-            username: post.user?.username || 'Anonymous',
-            body: post.body || '',
+            name: post.deployment?.strategy?.name || 'Unknown',
+            author: post.user?.username || 'Anonymous',
             asset: post.deployment?.asset || 'Unknown',
-            timeframe: post.deployment?.timeframe || '1D',
-            direction: post.deployment?.direction || 'Long',
-            backtest: {
-              asset: post.deployment?.asset || 'Unknown',
-              timeframe: post.deployment?.timeframe || '1D',
-              returnPct: backtest?.total_return_pct || 0,
-              winRate: backtest?.win_rate || 0,
-              sharpeRatio: backtest?.sharpe_ratio || 0,
-              maxDd: backtest?.max_dd || 0
-            },
+            timeframe: post.deployment?.timeframe || '1d',
+            direction: post.deployment?.direction || 'LONG',
+            return: backtest.total_return_pct || 0,
+            winRate: backtest.win_rate || 0,
+            sharpeRatio: backtest.sharpe_ratio || 0,
+            trades: backtest.total_trades || 0,
             likes: post.likes || 0,
             comments: post.comments || 0,
             publishedDate: post.created_at || new Date().toISOString()
@@ -75,14 +58,14 @@ export default function ExplorePage() {
         });
         setStrategies(transformedStrategies);
       } catch (err) {
-        console.error('Error fetching posts:', err);
+        console.error('Error fetching strategies:', err);
         setStrategies([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPosts();
+    fetchStrategies();
   }, []);
 
   // Filtering and sorting logic
@@ -93,7 +76,7 @@ export default function ExplorePage() {
         const query = searchQuery.toLowerCase();
         if (
           !strategy.name.toLowerCase().includes(query) &&
-          !strategy.username.toLowerCase().includes(query)
+          !strategy.author.toLowerCase().includes(query)
         ) {
           return false;
         }
@@ -107,18 +90,8 @@ export default function ExplorePage() {
       // Timeframe filter
       if (
         selectedTimeframes.length > 0 &&
-        !selectedTimeframes.includes(strategy.timeframe)
+        !selectedTimeframes.includes(strategy.timeframe.toLowerCase())
       ) {
-        return false;
-      }
-
-      // Return filter
-      if (strategy.backtest.returnPct < minReturn) {
-        return false;
-      }
-
-      // Vote filter
-      if (strategy.likes < minVotes) {
         return false;
       }
 
@@ -127,22 +100,26 @@ export default function ExplorePage() {
 
     // Sorting
     switch (sortBy) {
-      case 'top':
-        result.sort((a, b) => b.likes - a.likes);
-        break;
       case 'new':
-        result.sort((a, b) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
+        result.sort((a, b) => {
+          const aDate = new Date(a.publishedDate || 0).getTime();
+          const bDate = new Date(b.publishedDate || 0).getTime();
+          return bDate - aDate;
+        });
         break;
       case 'return':
-        result.sort((a, b) => b.backtest.returnPct - a.backtest.returnPct);
+        result.sort((a, b) => b.return - a.return);
         break;
-      case 'discussed':
-        result.sort((a, b) => b.comments - a.comments);
+      case 'votes':
+        result.sort((a, b) => b.likes - a.likes);
+        break;
+      case 'winrate':
+        result.sort((a, b) => b.winRate - a.winRate);
         break;
     }
 
     return result;
-  }, [searchQuery, selectedAssets, selectedTimeframes, minReturn, minVotes, sortBy, strategies]);
+  }, [searchQuery, selectedAssets, selectedTimeframes, sortBy, strategies]);
 
   const toggleAsset = (asset: string) => {
     setSelectedAssets((prev) =>
@@ -160,123 +137,77 @@ export default function ExplorePage() {
     setSearchQuery('');
     setSelectedAssets([]);
     setSelectedTimeframes([]);
-    setMinReturn(0);
-    setMinVotes(0);
   };
 
-  const hasActiveFilters =
-    selectedAssets.length > 0 ||
-    selectedTimeframes.length > 0 ||
-    minReturn > 0 ||
-    minVotes > 0;
-
   return (
-    <div className="min-h-screen bg-black text-base-content p-4 md:p-0">
-      <div className="max-w-6xl mx-auto">
-        {/* Header - Sticky Top */}
-        <div className="sticky top-0 z-40 bg-black/80 backdrop-blur border-b border-base-300 p-4 md:p-6">
-          <div className="max-w-5xl mx-auto">
-            <h1 className="text-2xl font-bold text-white mb-1">Explore Strategies</h1>
-            <p className="text-base-content/70 text-sm mb-4">
-              Discover published strategies from the community
-            </p>
-            <input
-              type="text"
-              placeholder="Search strategies or usernames..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-base-200 border border-base-300 text-base-content rounded-full px-4 py-2 placeholder-base-content/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+    <div className="min-h-screen bg-base-100 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Explore</h1>
+          <p className="text-base-content/70">Browse published strategies from the community</p>
         </div>
 
-        <div className="grid grid-cols-12 gap-0">
-          {/* Sidebar Filters */}
-          <div className="col-span-12 lg:col-span-3 border-r border-base-300 min-h-screen">
-            <div className="lg:sticky lg:top-24 max-h-[calc(100vh-96px)] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4 px-4 py-6 lg:mb-0 border-b border-base-300 lg:border-b-0">
-                <h2 className="text-lg font-bold text-white">Filters</h2>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="lg:hidden text-sm text-blue-400 hover:text-blue-300"
-                >
-                  {showFilters ? 'Hide' : 'Show'}
-                </button>
-              </div>
+        {/* Search */}
+        <div className="mb-8">
+          <input
+            type="text"
+            placeholder="Search strategies or authors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-base-200 border border-base-300 rounded-lg px-4 py-3 placeholder-base-content/50 focus:outline-none focus:ring-2 focus:ring-secondary"
+          />
+        </div>
 
-              <div
-                className={`${
-                  showFilters ? 'block' : 'hidden'
-                } lg:block p-4 space-y-6 border-b border-base-300 lg:border-b-0`}
-              >
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar Filters */}
+          <div className="lg:col-span-1">
+            <div className="card bg-base-200 shadow-md sticky top-20">
+              <div className="card-body">
+                <h2 className="card-title text-lg mb-4">Filter</h2>
+
                 {/* Assets */}
-                <div>
-                  <h3 className="font-semibold mb-3 text-white text-sm uppercase tracking-wide">Assets</h3>
-                  <div className="space-y-2">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Assets</h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
                     {ASSETS.map((asset) => (
-                      <label key={asset} className="flex items-center gap-2 cursor-pointer group">
+                      <label key={asset} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={selectedAssets.includes(asset)}
                           onChange={() => toggleAsset(asset)}
-                          className="w-4 h-4 rounded border-base-300 bg-base-200"
+                          className="checkbox checkbox-sm"
                         />
-                        <span className="text-sm text-base-content/80 group-hover:text-white transition-colors">{asset}</span>
+                        <span className="text-sm">{asset}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
+                <div className="divider my-3"></div>
+
                 {/* Timeframes */}
-                <div>
-                  <h3 className="font-semibold mb-3 text-white text-sm uppercase tracking-wide">Timeframes</h3>
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm">Timeframe</h3>
                   <div className="space-y-2">
                     {TIMEFRAMES.map((tf) => (
-                      <label key={tf} className="flex items-center gap-2 cursor-pointer group">
+                      <label key={tf} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={selectedTimeframes.includes(tf)}
                           onChange={() => toggleTimeframe(tf)}
-                          className="w-4 h-4 rounded border-base-300 bg-base-200"
+                          className="checkbox checkbox-sm"
                         />
-                        <span className="text-sm text-base-content/80 group-hover:text-white transition-colors">{tf}</span>
+                        <span className="text-sm uppercase">{tf}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                {/* Minimum Return */}
-                <div>
-                  <label className="text-white text-sm font-semibold mb-3 block">Min Return: <span className="text-emerald-400">{minReturn}%</span></label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="50"
-                    value={minReturn}
-                    onChange={(e) => setMinReturn(Number(e.target.value))}
-                    className="w-full h-2 bg-base-300 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-
-                {/* Minimum Votes */}
-                <div>
-                  <label className="text-white text-sm font-semibold mb-3 block">Min Votes: <span className="text-blue-400">{minVotes}</span></label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="500"
-                    step="50"
-                    value={minVotes}
-                    onChange={(e) => setMinVotes(Number(e.target.value))}
-                    className="w-full h-2 bg-base-300 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-
-                {/* Clear Filters */}
-                {hasActiveFilters && (
+                {(selectedAssets.length > 0 || selectedTimeframes.length > 0 || searchQuery) && (
                   <button
                     onClick={clearFilters}
-                    className="w-full px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
+                    className="btn btn-sm btn-outline w-full mt-4"
                   >
                     Clear Filters
                   </button>
@@ -286,159 +217,115 @@ export default function ExplorePage() {
           </div>
 
           {/* Main Content */}
-          <div className="col-span-12 lg:col-span-9 border-r border-base-300 lg:border-r-0">
-            {/* Sort Toolbar - Sticky */}
-            <div className="sticky top-20 z-30 bg-black/80 backdrop-blur border-b border-base-300 px-4 py-3 flex gap-2 overflow-x-auto">
-              {['top', 'new', 'return', 'discussed'].map((sort) => (
+          <div className="lg:col-span-3 space-y-4">
+            {/* Sort Toolbar */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {['new', 'return', 'votes', 'winrate'].map((sort) => (
                 <button
                   key={sort}
                   onClick={() => setSortBy(sort as SortBy)}
-                  className={`px-3 py-1 text-sm font-medium whitespace-nowrap rounded-full transition-colors ${
+                  className={`btn btn-sm whitespace-nowrap ${
                     sortBy === sort
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-base-200 text-base-content/70 hover:bg-base-300'
+                      ? 'btn-primary'
+                      : 'btn-outline'
                   }`}
                 >
                   {{
-                    top: '🔥 Top',
-                    new: '✨ New',
-                    return: '📈 Best Return',
-                    discussed: '💬 Discussed'
+                    new: 'Newest',
+                    return: 'Best Return',
+                    votes: 'Most Liked',
+                    winrate: 'Win Rate'
                   }[sort]}
                 </button>
               ))}
             </div>
 
-            {/* Loading State */}
+            {/* Results */}
             {isLoading ? (
-              <div className="space-y-4 p-4">
+              <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="bg-base-100/30 rounded-lg p-4 animate-pulse">
-                    <div className="h-4 bg-base-300 rounded w-1/4 mb-3"></div>
-                    <div className="h-5 bg-base-300 rounded w-2/3 mb-3"></div>
-                    <div className="flex gap-2 mb-3">
-                      <div className="h-6 bg-base-300 rounded-full w-24"></div>
-                      <div className="h-6 bg-base-300 rounded-full w-24"></div>
+                  <div key={i} className="card bg-base-200 shadow-md animate-pulse">
+                    <div className="card-body">
+                      <div className="h-6 bg-base-300 rounded w-1/3 mb-2"></div>
+                      <div className="h-4 bg-base-300 rounded w-2/3 mb-4"></div>
+                      <div className="h-4 bg-base-300 rounded w-full"></div>
                     </div>
-                    <div className="h-4 bg-base-300 rounded w-full"></div>
                   </div>
                 ))}
               </div>
             ) : filtered.length > 0 ? (
-              <div className="space-y-0 divide-y divide-base-300"
-              >
+              <div className="space-y-4">
                 {filtered.map((strategy) => (
                   <div
                     key={strategy.id}
-                    className="bg-base-100/30 hover:bg-base-100/50 transition-colors cursor-pointer p-4 group"
-                    onClick={() => navigate(`/strategy/${strategy.id}`)}
+                    onClick={() => navigate(`/post/${strategy.id}`)}
+                    className="card bg-base-200 shadow-md hover:shadow-lg hover:bg-base-300 transition-all cursor-pointer"
                   >
-                    {/* Author Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="text-2xl flex-shrink-0">📊</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p
-                              className="font-bold text-white hover:underline truncate"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/profile/${strategy.username.toLowerCase()}`);
-                              }}
-                            >
-                              {strategy.username}
-                            </p>
-                          </div>
-                          <p className="text-xs text-base-content/60">
-                            {new Date(strategy.publishedDate).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </p>
+                    <div className="card-body">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="card-title text-lg">{strategy.name}</h3>
+                          <p className="text-sm text-base-content/70">by {strategy.author}</p>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/strategies');
-                        }}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-full transition-colors"
-                      >
-                        Use Strategy
-                      </button>
-                    </div>
 
-                    {/* Strategy Title */}
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors leading-snug">
-                      {strategy.name}
-                    </h3>
+                      {/* Asset Info */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="badge badge-outline">{strategy.asset}</div>
+                        <div className="badge badge-outline uppercase">{strategy.timeframe}</div>
+                        <div className="badge badge-outline">{strategy.direction}</div>
+                      </div>
 
-                    {/* Asset Info */}
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/30">
-                        {strategy.asset} • {strategy.timeframe} • {strategy.direction}
-                      </span>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-sm text-base-content/70 mb-3 line-clamp-2">{strategy.body}</p>
-
-                    {/* Performance Metrics */}
-                    <div className="bg-base-200/30 rounded-lg p-3 mb-3 border border-base-300">
-                      <div className="grid grid-cols-4 gap-2">
+                      {/* Metrics Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-3 bg-base-100 rounded-lg">
                         <div>
-                          <p className="text-xs text-base-content/60 mb-1">Return</p>
-                          <p className={`text-sm font-bold ${strategy.backtest.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {strategy.backtest.returnPct >= 0 ? '+' : ''}{strategy.backtest.returnPct.toFixed(2)}%
+                          <p className="text-xs text-base-content/70 mb-1">Return</p>
+                          <p className={`font-bold ${strategy.return >= 0 ? 'text-success' : 'text-error'}`}>
+                            {strategy.return >= 0 ? '+' : ''}{strategy.return.toFixed(2)}%
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-base-content/60 mb-1">Win Rate</p>
-                          <p className="text-sm font-bold text-blue-400">{strategy.backtest.winRate.toFixed(2)}%</p>
+                          <p className="text-xs text-base-content/70 mb-1">Win Rate</p>
+                          <p className="font-bold">{strategy.winRate.toFixed(2)}%</p>
                         </div>
                         <div>
-                          <p className="text-xs text-base-content/60 mb-1">Sharpe</p>
-                          <p className="text-sm font-bold text-amber-400">{strategy.backtest.sharpeRatio.toFixed(2)}</p>
+                          <p className="text-xs text-base-content/70 mb-1">Sharpe</p>
+                          <p className="font-bold">{strategy.sharpeRatio.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-base-content/60 mb-1">Max DD</p>
-                          <p className="text-sm font-bold text-red-400">{(strategy.backtest.maxDd * 100).toFixed(2)}%</p>
+                          <p className="text-xs text-base-content/70 mb-1">Trades</p>
+                          <p className="font-bold">{strategy.trades}</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Engagement Footer */}
-                    <div className="flex items-center justify-between text-sm text-base-content/60 border-t border-base-300 pt-3">
-                      <div className="flex items-center gap-6">
-                        <button 
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 hover:text-emerald-400 transition-colors group/btn"
-                        >
-                          <span className="group-hover/btn:bg-emerald-500/20 px-2 py-1 rounded">👍</span>
-                          <span className="text-xs">{strategy.likes}</span>
-                        </button>
-                        <button
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 hover:text-blue-400 transition-colors group/btn"
-                        >
-                          <span className="group-hover/btn:bg-blue-500/20 px-2 py-1 rounded">💬</span>
-                          <span className="text-xs">{strategy.comments}</span>
-                        </button>
+                      {/* Footer */}
+                      <div className="flex items-center justify-between text-sm text-base-content/70 border-t border-base-300 pt-3">
+                        <div className="flex gap-4">
+                          <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-base-content transition"
+                          >
+                            👍 {strategy.likes}
+                          </button>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-base-content transition"
+                          >
+                            💬 {strategy.comments}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : isLoading ? (
-              // Loading state already displayed above
-              null
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
-                <p className="text-base-content/70 mb-4 text-center">No strategies match your filters.</p>
+              <div className="text-center py-12">
+                <p className="text-base-content/70 mb-4">No strategies match your filters</p>
                 <button
                   onClick={clearFilters}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-full transition-colors"
+                  className="btn btn-outline"
                 >
                   Clear Filters
                 </button>

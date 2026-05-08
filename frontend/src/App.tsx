@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"
 import { StrategyProvider } from "./contexts/StrategyContext"
 import Navbar from "./components/Navbar"
+import ProtectedRoute from "./components/ProtectedRoute"
 import LandingPage from "./pages/LandingPage"
 import DashboardPage from "./pages/DashboardPage"
 import MyStrategiesPage from "./pages/MyStrategiesPage"
@@ -17,7 +18,8 @@ import UserProfilePage from "./pages/UserProfilePage"
 import ExplorePage from "./pages/ExplorePage"
 import LeaderboardPage from "./pages/LeaderboardPage"
 import SettingsPage from "./pages/SettingsPage"
-import NotificationsPage from "./pages/NotificationsPage"
+import PostPage from "./pages/PostPage"
+import StrategyPostsPage from "./pages/StrategyPostsPage"
 function App() {
   return (
     <div className="text-base-content">
@@ -37,55 +39,86 @@ function App() {
           <RegisterPage />
         } />
         <Route path="/" element={
-          <DashboardPage />
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
         } />
         <Route path="/strategies" element={
-          <MyStrategiesPage />
+          <ProtectedRoute>
+            <MyStrategiesPage />
+          </ProtectedRoute>
         } />
         <Route path="/deployments/:strategyId" element={
-          <DeploymentsPage />
+          <ProtectedRoute>
+            <DeploymentsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/strategies/:strategyId/posts" element={
+          <ProtectedRoute>
+            <StrategyPostsPage />
+          </ProtectedRoute>
         } />
         <Route path="/create-post" element={
-          <CreatePostPage />
+          <ProtectedRoute>
+            <CreatePostPage />
+          </ProtectedRoute>
         } />
         <Route path="/strategy/edit" element={
-          <div className="mt-16">
-            <StrategyProvider>
-              <StrategyPage />
-            </StrategyProvider>
-          </div>
+          <ProtectedRoute>
+            <div className="mt-16">
+              <StrategyProvider>
+                <StrategyPage />
+              </StrategyProvider>
+            </div>
+          </ProtectedRoute>
         } />
         <Route path="/strategy" element={
-          <div className="mt-16">
-            <StrategyProvider>
-              <DeployStrategyPage />
-            </StrategyProvider>
-          </div>
+          <ProtectedRoute>
+            <div className="mt-16">
+              <StrategyProvider>
+                <DeployStrategyPage />
+              </StrategyProvider>
+            </div>
+          </ProtectedRoute>
         } />
         <Route path="/profile/:username" element={
-          <UserProfilePage />
+          <ProtectedRoute>
+            <UserProfilePage />
+          </ProtectedRoute>
         } />
         <Route path="/backtest-results" element={
-          <div className="mt-16">
-            <StrategyProvider>
-              <BacktestResultsPage />
-            </StrategyProvider>
-          </div>
+          <ProtectedRoute>
+            <div className="mt-16">
+              <StrategyProvider>
+                <BacktestResultsPage />
+              </StrategyProvider>
+            </div>
+          </ProtectedRoute>
         } />
         <Route path="/explore" element={
-          <ExplorePage />
+          <ProtectedRoute>
+            <ExplorePage />
+          </ProtectedRoute>
         } />
         <Route path="/leaderboard" element={
-          <LeaderboardPage />
+          <ProtectedRoute>
+            <LeaderboardPage />
+          </ProtectedRoute>
         } />
         <Route path="/settings" element={
-          <SettingsPage />
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
         } />
-        <Route path="/notifications" element={
-          <NotificationsPage />
+        <Route path="/post/:postId" element={
+          <ProtectedRoute>
+            <PostPage />
+          </ProtectedRoute>
         } />
         <Route path="/test" element={
-          <Test /> 
+          <ProtectedRoute>
+            <Test /> 
+          </ProtectedRoute>
         }/>
       </Routes>
       </div>

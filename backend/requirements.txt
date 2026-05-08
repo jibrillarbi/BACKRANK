@@ -4,3 +4,7 @@ supabase
 python-dotenv
 itsdangerous
 jinja2
+pandas
+yfinance
+backtesting
+pyarrow

@@ -1,14 +1,23 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { api, type LoginRequest, type RegisterRequest, type AuthResponse, type Strategy, type SavedStrategy, type SaveStrategyResponse } from "./index"
 
+export const storeCurrentUser = (data: AuthResponse) => {
+  localStorage.setItem("uid", data.uid)
+  localStorage.setItem("email", data.email)
+  localStorage.setItem("username", data.username)
+}
+
+export const clearCurrentUser = () => {
+  localStorage.removeItem("uid")
+  localStorage.removeItem("email")
+  localStorage.removeItem("username")
+}
+
 export const useLogin = () => {
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => api.login(data),
     onSuccess: (data) => {
-      // Store user info in localStorage
-      localStorage.setItem("uid", data.uid)
-      localStorage.setItem("email", data.email)
-      localStorage.setItem("username", data.username)
+      storeCurrentUser(data)
     },
   })
 }
@@ -17,10 +26,7 @@ export const useRegister = () => {
   return useMutation<AuthResponse, Error, RegisterRequest>({
     mutationFn: (data) => api.register(data),
     onSuccess: (data) => {
-      // Store user info in localStorage
-      localStorage.setItem("uid", data.uid)
-      localStorage.setItem("email", data.email)
-      localStorage.setItem("username", data.username)
+      storeCurrentUser(data)
     },
   })
 }
@@ -29,10 +35,7 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: () => api.logout(),
     onSuccess: () => {
-      // Clear user info from localStorage
-      localStorage.removeItem("uid")
-      localStorage.removeItem("email")
-      localStorage.removeItem("username")
+      clearCurrentUser()
     },
   })
 }

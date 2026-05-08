@@ -76,30 +76,31 @@ def ATR(high, low, close, n):
 def compute_indicators(df, indicators):
     for ind in indicators:
         col = ind.column_name
+        name = ind.name.lower()
 
         if col in df.columns:
             continue
 
-        if ind.name == "Open":
-            df[col] = df["Open"]
-        elif ind.name == "High":
-            df[col] = df["High"]
-        elif ind.name == "Low":
-            df[col] = df["Low"]
-        elif ind.name == "Close":
-            df[col] = df["Close"]
-        elif ind.name == "Volume":
-            df[col] = df["Volume"]
-        elif ind.name == "SMA":
-            df[col] = SMA(df["Close"], ind.period)
-        elif ind.name == "EMA":
-            df[col] = EMA(df["Close"], ind.period)
-        elif ind.name == "RSI":
-            df[col] = RSI(df["Close"], ind.period)
-        elif ind.name == "VMA":
-            df[col] = VMA(df["Volume"], ind.period)
-        elif ind.name == "ATR":
-            df[col] = ATR(df["High"], df["Low"], df["Close"], ind.period)
+        if name == "open":
+            df[col] = df["open"]
+        elif name == "high":
+            df[col] = df["high"]
+        elif name == "low":
+            df[col] = df["low"]
+        elif name == "close":
+            df[col] = df["close"]
+        elif name == "volume":
+            df[col] = df["volume"]
+        elif name == "sma":
+            df[col] = SMA(df["close"], ind.period)
+        elif name == "ema":
+            df[col] = EMA(df["close"], ind.period)
+        elif name == "rsi":
+            df[col] = RSI(df["close"], ind.period)
+        elif name == "vma":
+            df[col] = VMA(df["volume"], ind.period)
+        elif name == "atr":
+            df[col] = ATR(df["high"], df["low"], df["close"], ind.period)
         else:
             raise ValueError(f"Unknown indicator name: {ind.name}")
 

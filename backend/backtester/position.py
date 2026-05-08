@@ -14,6 +14,7 @@ class Position:
         self.pnl=0 #pnl, updated when closed
         self.u_pnl=0 # unrealised pnl
         self.value=self.lot_size*entry_price
+        self.exit_reason=None
     def stop_loss_calc(self):
         if self.stop_loss is not None: 
             if self.entry_type=='LONG':
@@ -92,9 +93,10 @@ class Position:
             raise ValueError(
             f"when calculating get_pnl expected LONG or SHORT, got {self.entry_type})")
         
-    def close(self,exit_price,exit_time):
+    def close(self,exit_price,exit_time,exit_reason=None):
         self.exit_price=exit_price
         self.exit_time=exit_time
+        self.exit_reason=exit_reason
         self.open=False
         self.update_value(exit_price)
         self.pnl=self.get_pnl()
@@ -106,4 +108,3 @@ class Position:
             f"Exit: {self.exit_time} @ {self.exit_price:.2f} | "
             f"PNL: {self.pnl:.2f}"
         )
-

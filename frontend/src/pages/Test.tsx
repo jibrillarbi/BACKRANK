@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useSaveStrategy } from '../api/useAuth';
 import { api } from '../api/index';
 
@@ -6,7 +6,7 @@ const Test = () => {
   const [name, setName] = useState('');
   const [entryRule, setEntryRule] = useState('SMA(2) > SMA(4) && Volume > VMA(3)');
   const [exitRule, setExitRule] = useState('Close < SMA(2)');
-  const [sessionData, setSessionData] = useState(null);
+  const [sessionData, setSessionData] = useState<{ uid: string } | null>(null);
   const [isPendingSession, setIsPendingSession] = useState(false);
   
   const { mutate: saveStrategy, isPending: isSavingStrategy, data: saveData, error: saveError } = useSaveStrategy();

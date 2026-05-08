@@ -7,12 +7,12 @@ import {
   Share2,
   ExternalLink,
   Zap,
-  Loader
+  Loader,
+  MessageSquare
 } from 'lucide-react';
 import { api, type SavedStrategy } from '../api/index';
 
 type StrategyStatus = 'Draft' | 'Tested' | 'Published';
-type ViewMode = 'grid' | 'list';
 
 interface BacktestRun {
   id: string;
@@ -28,6 +28,9 @@ interface BacktestRun {
 interface Strategy {
   id: string;
   name: string;
+  entryRule: string;
+  exitRule: string;
+  isPublished: boolean;
   status: StrategyStatus;
   createdDate: string;
   description: string;
@@ -36,29 +39,85 @@ interface Strategy {
   comments: number;
 }
 
+const deploymentToRun = (deployment: any): BacktestRun | null => {
+  const backtest = Array.isArray(deployment.backtest_data) ? deployment.backtest_data[0] : null;
+  if (!backtest) return null;
+
+  return {
+    id: String(deployment.id),
+    asset: deployment.asset || '',
+    timeframe: deployment.timeframe || '',
+    returnPct: Number(backtest.total_return_pct || 0),
+    winRate: Number(backtest.win_rate || 0),
+    sharpeRatio: Number(backtest.sharpe_ratio || 0),
+    maxDrawdown: Number(backtest.max_dd || 0),
+    runDate: new Date().toISOString().split('T')[0]
+  };
+};
+
 export default function MyStrategiesPage() {
   const navigate = useNavigate();
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const routeStateFor = (strategy: Strategy) => ({
+    strategy: {
+      name: strategy.name,
+      entry_rule: strategy.entryRule,
+      exit_rule: strategy.exitRule,
+      is_published: strategy.isPublished
+    }
+  });
+
+  const handleEdit = (strategy: Strategy) => {
+    navigate('/strategy/edit', { state: routeStateFor(strategy) });
+  };
+
+  const handleRun = (strategy: Strategy) => {
+    navigate('/strategy', { state: routeStateFor(strategy) });
+  };
+
+  const handlePublish = (strategy: Strategy) => {
+    if (strategy.backtestruns.length === 0) {
+      handleRun(strategy);
+      return;
+    }
+    navigate('/create-post');
+  };
+
+  const handleViewPublished = () => {
+    navigate('/explore');
+  };
+
   useEffect(() => {
     const fetchStrategies = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await api.getStrategies();
+        const [data, deployments] = await Promise.all([
+          api.getStrategies(),
+          api.getAllDeployments().catch(() => [])
+        ]);
         
-        // Transform backend data to frontend format with placeholders
         const transformedStrategies: Strategy[] = (data || []).map((saved: SavedStrategy) => {
           const strategy = saved.strategy;
+          const strategyDeployments = (deployments || []).filter((deployment: any) => String(deployment.sid) === String(saved.sid));
+          const runs = strategyDeployments.map(deploymentToRun).filter(Boolean) as BacktestRun[];
+          const isPublished = Boolean(strategy.is_published || strategyDeployments.some((deployment: any) => deployment.is_published));
+
           return {
             id: String(saved.sid),
             name: strategy.name || 'Untitled Strategy',
-            status: strategy.is_published ? 'Published' : 'Draft' as StrategyStatus,
+            entryRule: strategy.entry_rule || '',
+            exitRule: strategy.exit_rule || '',
+            isPublished,
+            status: isPublished ? 'Published' : runs.length > 0 ? 'Tested' : 'Draft' as StrategyStatus,
             createdDate: new Date().toISOString().split('T')[0],
-            description: 'No description provided',
-            backtestruns: [],
+            description: strategy.entry_rule && strategy.exit_rule
+              ? `Entry: ${strategy.entry_rule} | Exit: ${strategy.exit_rule}`
+              : 'No rules saved yet',
+            backtestruns: runs,
             votes: 0,
             comments: 0
           };
@@ -134,7 +193,7 @@ export default function MyStrategiesPage() {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/strategy')}
+                onClick={() => navigate('/strategy/edit')}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 rounded-lg font-semibold transition-all"
               >
                 <Plus size={20} />
@@ -149,7 +208,7 @@ export default function MyStrategiesPage() {
                   No strategies yet. Create your first one!
                 </div>
                 <button
-                  onClick={() => navigate('/strategy')}
+                  onClick={() => navigate('/strategy/edit')}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 rounded-lg font-semibold transition-all"
                 >
                   <Plus size={20} />
@@ -211,23 +270,35 @@ export default function MyStrategiesPage() {
                       {/* Actions */}
                       <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
-                          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-base-300 hover:bg-base-300 rounded-lg text-sm transition-colors">
+                          <button
+                            onClick={() => handleEdit(strategy)}
+                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-base-300 hover:bg-base-300 rounded-lg text-sm transition-colors"
+                          >
                             <Edit size={16} />
                             Edit
                           </button>
-                          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors">
+                          <button
+                            onClick={() => handleRun(strategy)}
+                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors"
+                          >
                             <Play size={16} />
                             Run
                           </button>
                           {strategy.status === 'Published' ? (
-                            <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm transition-colors">
+                            <button
+                              onClick={handleViewPublished}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm transition-colors"
+                            >
                               <ExternalLink size={16} />
                               View
                             </button>
                           ) : (
-                            <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-base-300 hover:bg-base-300 rounded-lg text-sm transition-colors">
+                            <button
+                              onClick={() => handlePublish(strategy)}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-base-300 hover:bg-base-300 rounded-lg text-sm transition-colors"
+                            >
                               <Share2 size={16} />
-                              Publish
+                              {strategy.backtestruns.length > 0 ? 'Publish' : 'Deploy First'}
                             </button>
                           )}
                         </div>
@@ -237,6 +308,13 @@ export default function MyStrategiesPage() {
                         >
                           <Zap size={16} />
                           View Deployments
+                        </button>
+                        <button
+                          onClick={() => navigate(`/strategies/${strategy.id}/posts`)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm transition-colors"
+                        >
+                          <MessageSquare size={16} />
+                          View Posts
                         </button>
                       </div>
                     </div>

@@ -5,115 +5,77 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-base-200">
-      {/* Navigation Bar */}
-      <div className="navbar bg-black sticky top-0 z-40 shadow-lg">
-        <div className="flex-1">
-          <button
-            onClick={() => navigate('/landing')}
-            className="btn btn-ghost gap-3"
-          >
-            <img src="/src/assets/logo.png" alt="BackRank" className="h-12 w-12" />
-            <span className="text-2xl font-bold text-secondary">BackRank</span>
-          </button>
-        </div>
-        <div className="flex-none gap-6">
-          <button onClick={() => navigate('/login')} className="btn btn-ghost btn-sm">
-            Login
-          </button>
-          <button onClick={() => navigate('/register')} className="btn btn-primary btn-sm">
-            Get Started
-          </button>
-        </div>
-      </div>
-
       {/* Hero Section */}
       <section className="hero min-h-screen bg-base-100">
-        <div className="hero-content max-w-7xl flex-col lg:flex-row gap-12">
+        <div className="hero-content max-w-5xl flex-col lg:flex-row gap-12">
           <div className="flex-1">
             <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Build and test trading strategies —{' '}
-              <span className="text-secondary">
-                no code required
-              </span>
+              Test Trading Strategies
             </h1>
             <p className="text-lg text-base-content/70 mb-8 leading-relaxed">
-              Turn your trading ideas into verifiable strategies. Use our visual strategy builder to combine technical indicators, backtest against real historical data, and discover your edge. Then share with the community and learn from the best traders on the platform.
+              Build trading strategies using technical indicators. Backtest them against historical market data. See what works and what doesn't.
             </p>
             <div className="flex items-center gap-4 mb-8 flex-wrap">
               <button
                 onClick={() => navigate('/register')}
-                className="btn btn-primary btn-lg gap-2"
+                className="btn btn-primary btn-lg"
               >
-                Get Started Free
-                →
+                Get Started
               </button>
               <button
                 onClick={() => navigate('/explore')}
                 className="btn btn-outline btn-lg"
               >
-                Explore Strategies
+                Explore
               </button>
             </div>
-            <p className="text-sm text-base-content/60">No credit card required. Free forever plan available.</p>
           </div>
 
           {/* Hero Visual - Strategy Builder Mockup */}
           <div className="flex-1">
-            <div className="card bg-base-200 shadow-xl border-2 border-secondary/20">
+            <div className="card bg-base-200 shadow-xl border border-base-300">
               <div className="card-body space-y-4">
-                {/* Mockup of strategy builder */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">Entry Conditions</p>
-                    <div className="badge badge-success badge-sm">Active</div>
-                  </div>
-                  <div className="space-y-2 bg-base-300 rounded p-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                      <span>RSI(14) &lt; 30</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-secondary rounded-full"></div>
-                      <span>SMA(50) &gt; SMA(200)</span>
-                    </div>
+                  <p className="text-xs font-semibold">Entry Rule</p>
+                  <div className="bg-base-300 rounded p-3 text-sm font-mono">
+                    RSI(14) &lt; 30 AND SMA(50) &gt; SMA(200)
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold">Exit Conditions</p>
-                  <div className="space-y-2 bg-base-300 rounded p-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-error rounded-full"></div>
-                      <span>Stop Loss: 2%</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-success rounded-full"></div>
-                      <span>Take Profit: 5%</span>
-                    </div>
+                  <p className="text-xs font-semibold">Exit Rule</p>
+                  <div className="bg-base-300 rounded p-3 text-sm font-mono">
+                    RSI(14) &gt; 70 OR Stop Loss 2%
                   </div>
                 </div>
 
                 <button className="btn btn-primary btn-block btn-sm">
-                  Test Strategy
+                  Run Backtest
                 </button>
               </div>
             </div>
 
-            {/* Floating backtest results card */}
-            <div className="card bg-base-100 shadow-lg border border-secondary/20 mt-6 max-w-xs ml-auto">
-              <div className="card-body gap-3 p-4">
-                <p className="text-xs font-semibold opacity-70">Backtest Results</p>
-                <div className="stat stat-vertical p-0">
-                  <div className="stat-title text-xs">Return</div>
-                  <div className="stat-value text-lg text-success">+24.5%</div>
-                </div>
-                <div className="stat stat-vertical p-0">
-                  <div className="stat-title text-xs">Win Rate</div>
-                  <div className="stat-value text-lg text-info">58%</div>
-                </div>
-                <div className="stat stat-vertical p-0">
-                  <div className="stat-title text-xs">Sharpe</div>
-                  <div className="stat-value text-lg text-warning">1.42</div>
+            {/* Results card */}
+            <div className="card bg-base-100 shadow-md border border-base-300 mt-6">
+              <div className="card-body gap-2 p-4">
+                <p className="text-xs font-semibold">Results</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="opacity-70">Return</p>
+                    <p className="font-bold text-success">+24.5%</p>
+                  </div>
+                  <div>
+                    <p className="opacity-70">Win Rate</p>
+                    <p className="font-bold text-info">58%</p>
+                  </div>
+                  <div>
+                    <p className="opacity-70">Sharpe</p>
+                    <p className="font-bold">1.42</p>
+                  </div>
+                  <div>
+                    <p className="opacity-70">Trades</p>
+                    <p className="font-bold">145</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -122,53 +84,35 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 lg:py-32 bg-base-300">
-        <div className="max-w-7xl mx-auto px-8">
-          <h2 className="text-4xl font-bold mb-4 text-center">How BackRank Works</h2>
-          <p className="text-base-content/70 text-center mb-16 max-w-2xl mx-auto">
-            From idea to tested strategy in four simple steps. No programming experience needed.
-          </p>
-
-          <ul className="steps steps-vertical lg:steps-horizontal w-full mb-8">
-            <li className="step step-primary">Build</li>
-            <li className="step step-primary">Backtest</li>
-            <li className="step step-primary">Analyze</li>
-            <li className="step step-primary">Share</li>
-          </ul>
+      <section className="py-16 lg:py-24 bg-base-300">
+        <div className="max-w-5xl mx-auto px-8">
+          <h2 className="text-3xl font-bold mb-12 text-center">How it works</h2>
 
           <div className="grid md:grid-cols-4 gap-6">
             {[
               {
-                step: '1',
-                icon: '💻',
-                title: 'Build',
-                description: 'Use our visual strategy builder to define your entry and exit rules using technical indicators like RSI, SMA, and EMA.'
+                title: 'Create',
+                description: 'Define your trading rules using technical indicators'
               },
               {
-                step: '2',
-                icon: '📈',
-                title: 'Backtest',
-                description: 'Choose an asset, timeframe, stop loss, and take profit. Run your strategy against 5+ years of historical market data.'
+                title: 'Test',
+                description: 'Run against 5+ years of real market data'
               },
               {
-                step: '3',
-                icon: '📊',
-                title: 'Analyse',
-                description: 'Get complete analytics — return %, win rate, Sharpe ratio, max drawdown, equity curves, and detailed trade history.'
+                title: 'Analyze',
+                description: 'Get detailed metrics and performance stats'
               },
               {
-                step: '4',
-                icon: '🔗',
                 title: 'Share',
-                description: 'Publish your strategy to the community, get feedback from other traders, and explore thousands of tested strategies.'
+                description: 'Publish and see how others improve your strategy'
               }
             ].map((item, idx) => (
-              <div key={idx} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
-                <div className="card-body">
-                  <h3 className="text-3xl mb-3">{item.icon}</h3>
-                  <h2 className="card-title text-xl">{item.title}</h2>
-                  <p className="text-sm text-base-content/70">{item.description}</p>
+              <div key={idx} className="space-y-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="text-2xl font-bold text-secondary">{idx + 1}</div>
+                  <h3 className="font-bold text-lg">{item.title}</h3>
                 </div>
+                <p className="text-sm text-base-content/70">{item.description}</p>
               </div>
             ))}
           </div>
@@ -176,122 +120,69 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 lg:py-32 bg-base-100">
-        <div className="max-w-7xl mx-auto px-8">
-          <h2 className="text-4xl font-bold mb-4 text-center">Powerful Features</h2>
-          <p className="text-base-content/70 text-center mb-16 max-w-2xl mx-auto">
-            Everything you need to build, test, and refine your trading strategies.
-          </p>
+      <section className="py-16 lg:py-24 bg-base-100">
+        <div className="max-w-5xl mx-auto px-8">
+          <h2 className="text-3xl font-bold mb-12 text-center">Features</h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
               {
-                icon: '💻',
-                title: 'No-Code Strategy Builder',
-                description:
-                  'Combine indicators and logical conditions visually to define entry and exit rules. No programming or technical expertise required.'
+                title: 'Visual Strategy Builder',
+                description: 'No coding required. Combine indicators like RSI, SMA, EMA  to define entry and exit rules.'
               },
               {
-                icon: '📈',
-                title: 'Historical Backtesting',
-                description:
-                  'Run strategies against real market data from the past 5+ years. Get results in seconds, not hours.'
+                title: 'Backtesting Engine',
+                description: 'Test strategies against historical data. Simulate realistic market conditions and slippage.'
               },
               {
-                icon: '🎖️',
-                title: 'Reusable Strategies',
-                description:
-                  'Strategies are not locked to one ticker. Test the same rule set across any asset or timeframe to uncover your edge.'
+                title: 'Performance Metrics',
+                description: 'Get return %, win rate, Sharpe ratio, max drawdown, equity curves, and trade history.'
               },
               {
-                icon: '📊',
-                title: 'Complete Metrics',
-                description:
-                  'Total return %, Sharpe ratio, max drawdown, win rate, equity curves, and full trade history for rigorous evaluation.'
-              },
-              {
-                icon: '👥',
-                title: 'Community Feed',
-                description:
-                  'Publish strategies, browse what others have built, upvote, comment, and clone strategies into your library.'
-              },
-              {
-                icon: '🏆',
-                title: 'Leaderboard',
-                description:
-                  'See which strategies and traders are performing best. Benchmark yourself and discover new trading approaches.'
+                title: 'Community & Leaderboard',
+                description: 'Share your research, get feedback, explore other strategies, and track performance.'
               }
             ].map((feature, idx) => (
-              <div key={idx} className="card bg-base-200 shadow-md hover:shadow-lg hover:border-secondary transition-all border border-base-300">
-                <div className="card-body">
-                  <h3 className="text-3xl mb-3">{feature.icon}</h3>
-                  <h2 className="card-title text-lg">{feature.title}</h2>
-                  <p className="text-sm text-base-content/70">{feature.description}</p>
-                </div>
+              <div key={idx} className="space-y-2">
+                <h3 className="font-bold text-lg">{feature.title}</h3>
+                <p className="text-base-content/70">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Social Proof / Stats Section */}
-      <section className="py-20 lg:py-32 bg-base-300">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { number: '12,400+', label: 'Backtests Run' },
-              { number: '3,200+', label: 'Strategies Published' },
-              { number: '1,800+', label: 'Registered Traders' },
-              { number: '98%', label: 'Uptime' }
-            ].map((stat, idx) => (
-              <div key={idx} className="card bg-base-200 shadow-md border border-base-300 p-6 text-center">
-                <div className="text-4xl font-bold text-secondary mb-2">{stat.number}</div>
-                <div className="text-sm font-semibold text-base-content/70">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="hero min-h-[300px] bg-base-200">
-        <div className="hero-content text-center">
-          <div className="max-w-md">
-            <h1 className="text-5xl font-bold mb-6">Start building your first strategy today</h1>
-            <p className="mb-10 text-lg">
-              Join hundreds of traders discovering their edge through systematic backtesting and community feedback.
-            </p>
-            <button
-              onClick={() => navigate('/register')}
-              className="btn btn-primary btn-lg gap-2"
-            >
-              Get Started Free
-              →
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer - DaisyUI Footer */}
-      <footer className="footer footer-center bg-base-300 text-base-content border-t border-base-400 p-10">
-        <aside>
-          <p className="font-bold text-lg text-secondary mb-4">
-            BackRank
+      {/* CTA Section */}
+      <section className="py-16 lg:py-24 bg-base-100">
+        <div className="max-w-2xl mx-auto text-center px-8">
+          <h2 className="text-3xl font-bold mb-4">Ready to test your ideas?</h2>
+          <p className="text-base-content/70 mb-8">
+            Create an account and start building strategies.
           </p>
-          <p>Building the future of systematic trading</p>
-        </aside>
-        <nav className="grid grid-flow-col gap-4">
-          
-          <button onClick={() => navigate('/login')} className="link link-hover">
+          <button
+            onClick={() => navigate('/register')}
+            className="btn btn-primary btn-lg"
+          >
+            Get Started
+          </button>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer footer-center bg-base-300 text-base-content border-t border-base-400 p-8">
+        <div>
+          <p className="font-bold text-secondary mb-2">BackRank</p>
+          <p className="text-sm text-base-content/70">A platform for testing trading strategies</p>
+        </div>
+        <nav className="flex gap-6">
+          <button onClick={() => navigate('/login')} className="link link-hover text-sm">
             Login
           </button>
-          <button onClick={() => navigate('/register')} className="link link-hover">
+          <button onClick={() => navigate('/register')} className="link link-hover text-sm">
             Register
           </button>
         </nav>
-        <aside>
-          <p>© 2026 BackRank. All rights reserved.</p>
-        </aside>
+        <p className="text-xs text-base-content/60">© 2026 BackRank</p>
       </footer>
     </div>
   );

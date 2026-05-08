@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Rocket, 
   Settings2, 
   ShieldAlert, 
   LineChart, 
@@ -12,7 +11,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useStrategy } from '../contexts/StrategyContext';
-import { api, type Strategy } from '../api';
+import { api, type StrategyBacktest, type Strategy as SavedStrategy } from '../api';
 import { getCurrentUser } from '../api/useAuth';
 
 // Mock data for the dropdowns
@@ -22,7 +21,6 @@ const TIMEFRAMES = [
   { value: '5m', label: '5 Minutes' },
   { value: '15m', label: '15 Minutes' },
   { value: '1h', label: '1 Hour' },
-  { value: '4h', label: '4 Hours' },
   { value: '1D', label: '1 Day' }
 ];
 
@@ -47,7 +45,12 @@ const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: (val:
 
 export default function DeployStrategyPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { strategyName: contextStrategyName, entryRule, exitRule } = useStrategy();
+  const routeStrategy = (location.state as { strategy?: SavedStrategy } | null)?.strategy;
+  const activeStrategyName = routeStrategy?.name || contextStrategyName || 'My Strategy';
+  const activeEntryRule = routeStrategy?.entry_rule || entryRule;
+  const activeExitRule = routeStrategy?.exit_rule || exitRule;
   
   useEffect(() => {
     const user = getCurrentUser();
@@ -72,17 +75,16 @@ export default function DeployStrategyPage() {
   // Backtest State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<any>(null);
 
   const handleRunBacktest = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const strategy: Strategy = {
-        NAME: contextStrategyName || 'My Strategy',
-        ENTRY: entryRule,
-        EXIT: exitRule,
+      const strategy: StrategyBacktest = {
+        NAME: activeStrategyName,
+        ENTRY: activeEntryRule,
+        EXIT: activeExitRule,
         DIRECTION: direction,
         TIMEFRAME: timeframe,
         TICKER: ticker,
@@ -92,7 +94,6 @@ export default function DeployStrategyPage() {
       };
       
       const data = await api.runBacktest(strategy);
-      setResults(data);
       console.log(' BACKTEST RESULTS:');
       console.log(JSON.stringify(data, null, 2));
       
@@ -111,23 +112,6 @@ export default function DeployStrategyPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDeploy = () => {
-    const payload = {
-      NAME: contextStrategyName || 'My strategy',
-      ENTRY: entryRule,
-      EXIT: exitRule,
-      DIRECTION: direction,
-      TIMEFRAME: timeframe,
-      TICKER: ticker,
-      SIZE: `${positionSize}`,
-      SL: useStopLoss ? `${stopLossPct}` : 'None',
-      TP: useTakeProfit ? `${takeProfitPct}` : 'None'
-    };
-    console.log("📊 DEPLOYMENT CONFIG:");
-    console.log(JSON.stringify(payload, null, 2));
-    alert("Strategy deployed! Check console for config.");
   };
 
   return (
@@ -156,10 +140,10 @@ export default function DeployStrategyPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-blue-400/80 mb-1">Active Strategy</p>
-                <h3 className="text-xl font-bold text-blue-100">{contextStrategyName || 'Trend Follower Alpha'}</h3>
-                {entryRule && (
+                <h3 className="text-xl font-bold text-blue-100">{activeStrategyName || 'Trend Follower Alpha'}</h3>
+                {activeEntryRule && (
                   <p className="text-xs text-blue-300/70 mt-2">
-                    Entry: <span className="font-mono text-blue-300">{entryRule.substring(0, 50)}...</span>
+                    Entry: <span className="font-mono text-blue-300">{activeEntryRule.substring(0, 50)}...</span>
                   </p>
                 )}
               </div>
@@ -305,6 +289,9 @@ export default function DeployStrategyPage() {
                       <div className="relative">
                         <input 
                           type="number" 
+                          min={0}
+                          step="0.01"
+                          inputMode="decimal"
                           value={stopLossPct}
                           onChange={(e) => setStopLossPct(parseFloat(e.target.value) || 0)}
                           className="w-full bg-base-100 border border-red-900/50 text-base-content rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -332,6 +319,9 @@ export default function DeployStrategyPage() {
                       <div className="relative">
                         <input 
                           type="number" 
+                          min={0}
+                          step="0.01"
+                          inputMode="decimal"
                           value={takeProfitPct}
                           onChange={(e) => setTakeProfitPct(parseFloat(e.target.value) || 0)}
                           className="w-full bg-base-100 border border-emerald-900/50 text-base-content rounded-md pl-3 pr-10 h-10 focus:outline-none focus:ring-2 focus:ring-emerald-500"

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Code, Save, ChevronRight, AlertCircle, X } from 'lucide-react';
 import type { Condition } from '../types/strategy';
-import type { Strategy, SavedStrategy } from '../api/index';
+import type { Strategy } from '../api/index';
 import { generateRuleString } from '../utils/strategyHelpers';
 import { StrategyBuilder } from '../components/StrategyBuilder';
 import { useStrategy } from '../contexts/StrategyContext';
@@ -10,12 +10,14 @@ import { useGetStrategies } from '../api/useAuth';
 
 export default function StrategyPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { strategyName: contextName, setRules, entryConditions: contextEntryConditions, exitConditions: contextExitConditions, setConditions } = useStrategy();
   const { data: savedStrategies, isLoading: strategiesLoading } = useGetStrategies();
+  const routeStrategy = (location.state as { strategy?: Strategy } | null)?.strategy;
   
-  const [strategyName, setStrategyName] = useState<string>(contextName || '');
+  const [strategyName, setStrategyName] = useState<string>(routeStrategy?.name || contextName || '');
   const [showSaved, setShowSaved] = useState(false);
-  const [loadedStrategy, setLoadedStrategy] = useState<Strategy | null>(null);
+  const [loadedStrategy] = useState<Strategy | null>(routeStrategy || null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [entryConditions, setEntryConditions] = useState<Condition[]>(contextEntryConditions);
   const [exitConditions, setExitConditions] = useState<Condition[]>(contextExitConditions);
@@ -36,7 +38,7 @@ export default function StrategyPage() {
       errors.push('Strategy name must be 50 characters or less');
     }
 
-    if (savedStrategies?.some(s => s.strategy.name === strategyName)) {
+    if (!loadedStrategy && savedStrategies?.some(s => s.strategy.name === strategyName)) {
       errors.push(`Strategy "${strategyName}" already exists`);
     }
 

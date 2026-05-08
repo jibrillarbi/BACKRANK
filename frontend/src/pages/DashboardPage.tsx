@@ -2,30 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, TrendingUp, BarChart3 } from 'lucide-react';
 import { getCurrentUser } from '../api/useAuth';
-
-interface UserStrategy {
-  id: string;
-  name: string;
-  backtestRuns: number;
-  bestRunAsset?: string;
-  bestRunTimeframe?: string;
-  returnPct: number;
-  winRate: number;
-  backtested: boolean;
-}
-
-interface FeedItem {
-  id: string;
-  author: string;
-  avatar: string;
-  strategyTitle: string;
-  asset: string;
-  timeframe: string;
-  returnPct: number;
-  votes: number;
-  comments: number;
-  timestamp: string;
-}
+import type { UserStrategy, FeedItem } from '../api/index';
+import { api } from '../api/index';
 
 const StatCard = ({ label, value, color = 'blue' }: { label: string; value: string | number; color?: 'green' | 'red' | 'blue' | 'amber' }) => {
   const colorClass = {
@@ -46,91 +24,65 @@ const StatCard = ({ label, value, color = 'blue' }: { label: string; value: stri
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [personalStrategies, setPersonalStrategies] = useState<UserStrategy[]>([]);
+  const [communityFeed, setCommunityFeed] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
     setCurrentUser(user);
   }, []);
 
-  // Mock personal strategies
-  const personalStrategies: UserStrategy[] = [
-    {
-      id: '1',
-      name: 'SMA Crossover',
-      backtestRuns: 5,
-      bestRunAsset: 'AAPL',
-      bestRunTimeframe: '1D',
-      returnPct: 24.5,
-      winRate: 58,
-      backtested: true
-    },
-    {
-      id: '2',
-      name: 'RSI Divergence',
-      backtestRuns: 8,
-      bestRunAsset: 'BTC',
-      bestRunTimeframe: '4H',
-      returnPct: 18.2,
-      winRate: 52,
-      backtested: true
-    },
-    {
-      id: '3',
-      name: 'EMA Momentum',
-      backtestRuns: 0,
-      returnPct: 0,
-      winRate: 0,
-      backtested: false
-    }
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [strategies, feed] = await Promise.all([
+          api.getUserStrategies(),
+          api.getCommunityFeed(10, 0)
+        ]);
+        setPersonalStrategies(strategies);
+        setCommunityFeed(feed);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        // Fallback to empty arrays
+        setPersonalStrategies([]);
+        setCommunityFeed([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock community feed
-  const communityFeed: FeedItem[] = [
-    {
-      id: '1',
-      author: 'TradingMaster92',
-      avatar: '👤',
-      strategyTitle: 'Bollinger Band Squeeze',
-      asset: 'NVDA',
-      timeframe: '1D',
-      returnPct: 31.5,
-      votes: 234,
-      comments: 18,
-      timestamp: '2h ago'
-    },
-    {
-      id: '2',
-      author: 'QuantJunkie',
-      avatar: '👨‍💼',
-      strategyTitle: 'Multi-MA Support',
-      asset: 'SPY',
-      timeframe: '4H',
-      returnPct: 42.1,
-      votes: 812,
-      comments: 45,
-      timestamp: '4h ago'
-    },
-    {
-      id: '3',
-      author: 'CryptoWizard',
-      avatar: '🧙',
-      strategyTitle: 'MACD Confluence',
-      asset: 'ETH/USD',
-      timeframe: '1H',
-      returnPct: 28.7,
-      votes: 456,
-      comments: 32,
-      timestamp: '6h ago'
-    }
-  ];
+    fetchData();
+  }, []);
 
-  const bestPerformer = personalStrategies.filter(s => s.backtested).reduce((prev, current) => 
-    (prev.returnPct > current.returnPct) ? prev : current, personalStrategies[0]
-  );
+  const bactestedStrategies = personalStrategies.filter(s => s.backtested);
+  const bestPerformer = bactestedStrategies.length > 0
+    ? bactestedStrategies.reduce((prev, current) => 
+        (prev.returnPct > current.returnPct) ? prev : current
+      )
+    : { backtested: false, returnPct: 0, name: 'N/A' };
 
   return (
     <div className="min-h-screen bg-black text-base-content p-4 md:p-8 lg:p-12 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Error State */}
+        {error && (
+          <div className="alert alert-error">
+            <div>
+              <span>Error loading dashboard: {error}</span>
+            </div>
+          </div>
+        )}
+
+        {loading && (
+          <div className="border border-base-300 bg-base-100/50 rounded-lg p-4 text-base-content/70">
+            Loading dashboard...
+          </div>
+        )}
         
         {/* Header */}
         <header>
@@ -154,7 +106,7 @@ export default function DashboardPage() {
           />
           <StatCard 
             label="Best Performer" 
-            value={bestPerformer.backtested ? `+${bestPerformer.returnPct}%` : 'N/A'}
+            value={bestPerformer.backtested ? `+${bestPerformer.returnPct.toFixed(2)}%` : 'N/A'}
             color={bestPerformer.backtested && bestPerformer.returnPct >= 0 ? 'green' : 'red'}
           />
           <StatCard 
@@ -241,6 +193,7 @@ export default function DashboardPage() {
               {communityFeed.map((item) => (
                 <div
                   key={item.id}
+                  onClick={() => navigate(`/post/${item.id}`)}
                   className="bg-base-100/50 border border-base-300 rounded-lg p-5 hover:border-emerald-500/50 hover:bg-base-100/70 transition-all cursor-pointer group"
                 >
                   {/* Author Info */}

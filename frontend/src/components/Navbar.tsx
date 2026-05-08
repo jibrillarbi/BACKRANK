@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../api/useAuth';
 
@@ -6,10 +5,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = getCurrentUser();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Unread notifications count
-  const unreadCount = 3;
 
   // Check if a route is active
   const isActive = (path: string) => {
@@ -17,17 +12,8 @@ export default function Navbar() {
     return location.pathname.startsWith(path);
   };
 
-  // Handle search submission
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery('');
-    }
-  };
-
   // Get username for avatar dropdown
-  const username = currentUser?.email?.split('@')[0] || 'User';
+  const username = currentUser?.username || currentUser?.email?.split('@')[0] || 'User';
 
   return (
     <div className="navbar bg-black shadow-lg fixed top-0 left-0 right-0 z-50 h-16">
@@ -42,25 +28,19 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Center Section: Navigation + Search */}
+      {/* Center Section: Core Navigation */}
       <div className="flex-none gap-2 hidden md:flex">
         {!currentUser ? (
           <>
           </>
         ) : (
           <>
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="form-control">
-              <input
-                type="text"
-                placeholder="Search strategies, users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input input-bordered input-sm w-48 lg:w-64"
-              />
-            </form>
-
-            {/* Desktop Nav Links */}
+            <button
+              onClick={() => navigate('/')}
+              className={`btn btn-ghost btn-sm ${isActive('/') ? 'btn-active' : ''}`}
+            >
+              Dashboard
+            </button>
             <button
               onClick={() => navigate('/explore')}
               className={`btn btn-ghost btn-sm ${isActive('/explore') ? 'btn-active' : ''}`}
@@ -72,6 +52,12 @@ export default function Navbar() {
               className={`btn btn-ghost btn-sm ${isActive('/leaderboard') ? 'btn-active' : ''}`}
             >
               Leaderboard
+            </button>
+            <button
+              onClick={() => navigate('/strategies')}
+              className={`btn btn-ghost btn-sm ${isActive('/strategies') ? 'btn-active' : ''}`}
+            >
+              My Strategies
             </button>
             <button
               onClick={() => navigate('/create-post')}
@@ -91,7 +77,7 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Right Section: Auth Buttons / Notifications / Avatar */}
+      {/* Right Section: Auth Buttons / Avatar */}
       <div className="flex gap-2">
         {!currentUser ? (
           <>
@@ -107,19 +93,6 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            {/* Notifications Bell */}
-            <div className="indicator">
-              <span className={`indicator-item badge badge-sm ${unreadCount > 0 ? 'badge-error' : 'badge-ghost'}`}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-              <button
-                onClick={() => navigate('/notifications')}
-                className="btn btn-ghost btn-circle btn-sm"
-              >
-                🔔
-              </button>
-            </div>
-
             {/* User Avatar Dropdown */}
             <div className="dropdown dropdown-end">
               <button className="btn btn-ghost btn-circle avatar placeholder btn-sm">
@@ -162,6 +135,14 @@ export default function Navbar() {
               <ul className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                 <li>
                   <button
+                    onClick={() => navigate('/')}
+                    className={isActive('/') ? 'active' : ''}
+                  >
+                    Dashboard
+                  </button>
+                </li>
+                <li>
+                  <button
                     onClick={() => navigate('/explore')}
                     className={isActive('/explore') ? 'active' : ''}
                   >
@@ -177,18 +158,24 @@ export default function Navbar() {
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate('/strategy/edit')}>
-                    New Strategy
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('/profile/' + username.toLowerCase())}>
-                    My Profile
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('/strategies')}>
+                  <button
+                    onClick={() => navigate('/strategies')}
+                    className={isActive('/strategies') ? 'active' : ''}
+                  >
                     My Strategies
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => navigate('/create-post')}
+                    className={isActive('/create-post') ? 'active' : ''}
+                  >
+                    Share
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/strategy')}>
+                    Backtest
                   </button>
                 </li>
               </ul>
