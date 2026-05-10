@@ -221,7 +221,7 @@ export default function CreatePostPage() {
                     <p className="text-lg font-bold text-blue-400">{selectedDeployment.backtest_data[0].win_rate.toFixed(2)}%</p>
                   </div>
                   <div>
-                    <p className="text-sm text-base-content/60">PnL</p>
+                    <p className="text-sm text-base-content/60">Final Equity</p>
                     <p className={`text-lg font-bold ${
                       selectedDeployment.backtest_data[0].final_capital >= 0 ? 'text-emerald-400' : 'text-red-400'
                     }`}>

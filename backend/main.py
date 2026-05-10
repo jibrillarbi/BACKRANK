@@ -461,7 +461,6 @@ def add_config(payload: DeploymentPayload, user_id: str = Depends(get_current_us
     try:
         strat = payload.strategy
         bt = payload.backtest
-        score = normalized_backtest_score(bt)
         
         s=Strategy(name = strat.NAME, entry_rule=strat.ENTRY, exit_rule=strat.EXIT)
         existing = save_strategy(s,user_id)
@@ -487,6 +486,8 @@ def add_config(payload: DeploymentPayload, user_id: str = Depends(get_current_us
         if query.execute().data:
             return {"message": "This exact deployment already exists. Please modify the parameters."}
 
+        deployment_score = normalized_backtest_score(bt)
+
         res =  supabase.table("deployment").insert({
             "uid": user_id,
             "sid": id,
@@ -496,36 +497,41 @@ def add_config(payload: DeploymentPayload, user_id: str = Depends(get_current_us
             "tp": tp,
             "direction": dep_data["DIRECTION"],
             "sizing": dep_data["SIZE"],
-            "score": score,
+            "score": deployment_score,
             "is_published": False
         }).execute()
         
         deployment_id = res.data[0]["id"]
 
-        add_backtest_result(bt, deployment_id, user_id)
+        try:
+            backtest_result = add_backtest_result(bt, deployment_id)
+        except Exception:
+            supabase.table("deployment").delete().eq("id", deployment_id).eq("uid", user_id).execute()
+            raise
         
-        return res.data[0]
+        return {
+            **res.data[0],
+            "backtest_data": [backtest_result],
+        }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error saving deployment {str(e)}")
-def add_backtest_result(data: Backtestr, dep_id: str, user_id: str):
-    try:
-        score = normalized_backtest_score(data)
-        res = supabase.table("backtest_data").insert({
-            "did": dep_id,
-            "total_return_pct": data.trp,
-            "sharpe_ratio": data.sr,
-            "max_dd": data.maxdd,
-            "win_rate": data.wr,
-            "total_trades": data.tt,
-            "final_capital": data.fc,
-            "score": score
-        }).execute()
-        return res.data[0]
-    except Exception as e:
-        print(f"Error saving Backtest Results: {str(e)}")
-        return None
+def add_backtest_result(data: Backtestr, dep_id: str):
+    res = supabase.table("backtest_data").insert({
+        "did": dep_id,
+        "total_return_pct": data.trp,
+        "sharpe_ratio": data.sr,
+        "max_dd": data.maxdd,
+        "win_rate": data.wr,
+        "total_trades": data.tt,
+        "final_capital": data.fc,
+    }).execute()
+
+    if not res.data:
+        raise Exception("Failed to insert backtest data")
+
+    return res.data[0]
 
 
 
@@ -542,7 +548,8 @@ def save_deployment(payload: DeploymentPayload, user_id: str = Depends(get_curre
     return {
         "message": "Deployment saved successfully",
         "deployment_id": deployment.get("id"),
-        "score": deployment.get("score")
+        "score": deployment.get("score"),
+        "backtest_data": deployment.get("backtest_data", [])
     }
 
 
@@ -682,12 +689,10 @@ def delete_post(post_id: str, user_id: str = Depends(get_current_user)):
 
 @app.get("/leaderboard/strategies")
 def get_strategy_leaderboard(limit: int = 10):
-    """Get top performing strategies based on stored score in backtest_data"""
+    """Get top performing strategies based on the deployment score."""
     try:
         res = supabase.table("posts") \
-            .select("*, deployment(id, sid, strategy(id, name), backtest_data(score, total_return_pct, sharpe_ratio, win_rate)), user(username)") \
-            .order("deployment.backtest_data.score", desc=True) \
-            .limit(limit) \
+            .select("*, deployment(id, sid, score, strategy(id, name), backtest_data(total_return_pct, sharpe_ratio, win_rate)), user(username)") \
             .execute()
         
         strategy_scores = {}
@@ -709,7 +714,7 @@ def get_strategy_leaderboard(limit: int = 10):
                 continue
                 
             backtest = backtest_list[0] if backtest_list else {}
-            score = float(backtest.get("score", 0) or 0)
+            score = float(deployment.get("score", 0) or 0)
             
             if strategy_id not in strategy_scores or score > strategy_scores[strategy_id]["score"]:
                 strategy_scores[strategy_id] = {
@@ -995,6 +1000,7 @@ def get_post(post_id: str):
             "asset": deployment.get("asset", "") if deployment else "",
             "timeframe": deployment.get("timeframe", "") if deployment else "",
             "returnPct": float(backtest.get("total_return_pct", 0) or 0) if backtest else 0,
+            "score": float(deployment.get("score", 0) or 0) if deployment else 0,
             "votes": post.get("likes", 0),
             "comments": len(comments),
             "body": post.get("body", ""),
@@ -1007,6 +1013,7 @@ def get_post(post_id: str):
                 "sizing": deployment.get("sizing", ""),
                 "sl": deployment.get("sl", ""),
                 "tp": deployment.get("tp", ""),
+                "score": float(deployment.get("score", 0) or 0) if deployment else 0,
             },
             "strategy": {
                 "name": strategy.get("name", "") if strategy else "",

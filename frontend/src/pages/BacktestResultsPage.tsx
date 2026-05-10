@@ -212,6 +212,24 @@ const toUtcTimestamp = (rawDate: string): UTCTimestamp | null => {
   return Math.floor(ms / 1000) as UTCTimestamp;
 };
 
+const formatChartTime = (time: any): string => {
+  if (typeof time === 'object' && time && 'year' in time && 'month' in time && 'day' in time) {
+    return `${time.year}-${String(time.month).padStart(2, '0')}-${String(time.day).padStart(2, '0')}`;
+  }
+
+  if (typeof time !== 'number') return '';
+
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(time * 1000));
+};
+
 const timeframeToSeconds = (timeframe: string | undefined): number => {
   const tf = (timeframe ?? '').trim().toLowerCase();
   const match = tf.match(/^(\d+)(m|h|d|w)$/);
@@ -530,9 +548,7 @@ const TradingViewBacktestChart = ({
         return;
       }
 
-      const time = typeof param.time === 'object'
-        ? `${param.time.year}-${String(param.time.month).padStart(2, '0')}-${String(param.time.day).padStart(2, '0')}`
-        : new Date(param.time * 1000).toLocaleString();
+      const time = formatChartTime(param.time);
 
       setHoverInfo({
         x: param.point.x,

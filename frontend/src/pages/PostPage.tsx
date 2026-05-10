@@ -13,6 +13,7 @@ interface Post {
   asset: string;
   timeframe: string;
   returnPct: number;
+  score?: number | null;
   votes: number;
   comments: number;
   body: string;
@@ -22,9 +23,10 @@ interface Post {
     asset: string;
     timeframe: string;
     direction: string;
-    sizing: string;
-    sl: string;
-    tp: string;
+    sizing: string | number;
+    sl: string | number | null;
+    tp: string | number | null;
+    score?: number | null;
   };
   strategy: {
     name: string;
@@ -198,6 +200,22 @@ export default function PostPage() {
     }
   };
 
+  const formatSignedPercent = (value: number | undefined | null) => {
+    const numericValue = Number(value ?? 0);
+    const sign = numericValue > 0 ? '+' : '';
+    return `${sign}${numericValue.toFixed(2)}%`;
+  };
+
+  const formatOptionalPercent = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined || value === '' || String(value).toLowerCase() === 'none') {
+      return null;
+    }
+
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return String(value);
+    return `${numericValue.toFixed(2)}%`;
+  };
+
   useEffect(() => {
     const fetchPost = async () => {
       try {
@@ -278,6 +296,11 @@ export default function PostPage() {
     );
   }
 
+  const scoreValue = Number(post.deployment?.score ?? post.score);
+  const strategyScore = Number.isFinite(scoreValue) ? scoreValue.toFixed(2) : 'N/A';
+  const stopLoss = formatOptionalPercent(post.deployment?.sl);
+  const takeProfit = formatOptionalPercent(post.deployment?.tp);
+
   return (
     <div className="min-h-screen bg-base-100 p-4 md:p-8 lg:p-12">
       <div className="max-w-4xl mx-auto">
@@ -333,6 +356,18 @@ export default function PostPage() {
                 <p className="text-xs text-base-content/60">Sizing</p>
                 <p className="font-semibold">{post.deployment?.sizing || 'N/A'}%</p>
               </div>
+              {stopLoss && (
+                <div>
+                  <p className="text-xs text-base-content/60">Stop Loss</p>
+                  <p className="font-semibold">{stopLoss}</p>
+                </div>
+              )}
+              {takeProfit && (
+                <div>
+                  <p className="text-xs text-base-content/60">Take Profit</p>
+                  <p className="font-semibold">{takeProfit}</p>
+                </div>
+              )}
             </div>
 
             {/* Entry/Exit Rules */}
@@ -357,9 +392,23 @@ export default function PostPage() {
             <div>
               <h3 className="font-semibold text-lg mb-4">Backtest Results</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded">
-                  <p className="text-xs text-emerald-300">Total Return</p>
-                  <p className="text-2xl font-bold text-emerald-300">+{post.backtest?.total_return_pct?.toFixed(2) || 0}%</p>
+                <div className={`p-3 rounded border ${
+                  (post.backtest?.total_return_pct ?? 0) >= 0
+                    ? 'bg-emerald-500/10 border-emerald-500/30'
+                    : 'bg-red-500/10 border-red-500/30'
+                }`}>
+                  <p className={`text-xs ${
+                    (post.backtest?.total_return_pct ?? 0) >= 0 ? 'text-emerald-300' : 'text-red-300'
+                  }`}>Total Return</p>
+                  <p className={`text-2xl font-bold ${
+                    (post.backtest?.total_return_pct ?? 0) >= 0 ? 'text-emerald-300' : 'text-red-300'
+                  }`}>{formatSignedPercent(post.backtest?.total_return_pct)}</p>
+                </div>
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
+                  <p className="text-xs text-yellow-300">Strategy Score</p>
+                  <p className="text-2xl font-bold text-yellow-300">
+                    {strategyScore}
+                  </p>
                 </div>
                 <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
                   <p className="text-xs text-blue-300">Sharpe Ratio</p>
