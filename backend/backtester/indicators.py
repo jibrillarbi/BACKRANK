@@ -1,14 +1,20 @@
 import pandas as pd
 
 def SMA(values, n):
+    if not (n > 0 and n < 50):
+        raise ValueError("n must be between 1 and 49")
     return pd.Series(values).rolling(n).mean()
 
 
 def VMA(volume, n):
+    if not (n > 0 and n < 50):
+        raise ValueError("n must be between 1 and 49")
     return pd.Series(volume).rolling(n).mean()
 
 
 def EMA(values, n):
+    if not (n > 0 and n < 50):
+        raise ValueError("n must be between 1 and 49")
     s = pd.Series(values, dtype=float).copy()
     s.iloc[:n-1] = pd.NA
     s.iloc[n-1] = s.iloc[:n].mean()
@@ -21,6 +27,8 @@ def EMA(values, n):
 
 
 def RSI(values, n):
+    if not (n > 0 and n < 50):
+        raise ValueError("n must be between 1 and 49")
     delta = pd.Series(values).diff()
 
     gain = delta.clip(lower=0)
@@ -49,6 +57,8 @@ def RSI(values, n):
 
 
 def ATR(high, low, close, n):
+    if not (n > 0 and n < 50):
+        raise ValueError("n must be between 1 and 49")
     high = pd.Series(high)
     low = pd.Series(low)
     close = pd.Series(close)
