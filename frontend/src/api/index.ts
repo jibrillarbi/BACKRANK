@@ -15,7 +15,10 @@ export interface SavedStrategy {
 
 export interface SaveStrategyResponse {
   message?: string
+  strategy_id?: string | number
   strategy?: Strategy
+  duplicate?: boolean
+  success?: boolean
 }
 
 export interface StrategyBacktest {
@@ -140,6 +143,50 @@ export interface FeedItem {
   timestamp: string
 }
 
+export interface PostDetail {
+  id: string
+  author_uid?: string
+  author: string
+  timestamp: string
+  strategyTitle: string
+  asset: string
+  timeframe: string
+  returnPct: number
+  score?: number | null
+  votes: number
+  comments: number
+  body: string
+  commentsList: Array<{
+    id: string
+    author: string
+    body: string
+    createdAt: string
+  }>
+  deployment: {
+    id: string
+    asset: string
+    timeframe: string
+    direction: string
+    sizing: string | number
+    sl: string | number | null
+    tp: string | number | null
+    score?: number | null
+  }
+  strategy: {
+    name: string
+    entry_rule: string
+    exit_rule: string
+  }
+  backtest: {
+    total_return_pct: number
+    sharpe_ratio: number
+    max_dd: number
+    win_rate: number
+    total_trades: number
+    final_capital: number
+  }
+}
+
 export const api = {
   getRoot: () => client.get("/").then(res => res.data),
   getCurrentUser: () => client.get("/me").then(res => res.data),
@@ -177,6 +224,8 @@ export const api = {
     client.post("/posts", { did, body }).then(res => res.data),
   getPosts: () =>
     client.get("/posts").then(res => res.data),
+  getPost: (postId: string | number) =>
+    client.get(`/post/${postId}`).then(res => res.data) as Promise<PostDetail | { error: string }>,
   getStrategyPosts: (strategyId: string) =>
     client.get("/strategy_posts", { params: { strat_id: strategyId } }).then(res => res.data),
   deletePost: (postId: string | number) =>
@@ -213,4 +262,6 @@ export const api = {
   // Like endpoints
   toggleLike: (pid: string) =>
     client.post("/like", { pid }).then(res => res.data),
+  checkPostLiked: (postId: string | number) =>
+    client.get(`/post/${postId}/liked`).then(res => res.data) as Promise<{ liked: boolean }>,
 }

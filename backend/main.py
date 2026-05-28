@@ -11,18 +11,25 @@ import datetime
 import hashlib
 import hmac
 import secrets
+from pathlib import Path
 from itsdangerous import URLSafeSerializer
 from dotenv import load_dotenv
 
 app = FastAPI()
-load_dotenv()
+load_dotenv(Path(__file__).with_name(".env"))
 
 
 data_manager = DataManager()
 
+def get_csv_env(name: str, default: str = "") -> list[str]:
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+CORS_ORIGINS = get_csv_env("CORS_ORIGINS", "http://localhost:5173,http://localhost:4173")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,11 +38,14 @@ app.add_middleware(
 
 url = os.getenv("SUPABASE_URL")
 key= os.getenv("SUPABASE_KEY")
+if not url or not key:
+    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
 supabase: Client = create_client(url,key)
 
 
 SECRET_KEY= os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax").lower()
 serializer = URLSafeSerializer(SECRET_KEY)
 
 
@@ -384,7 +394,7 @@ def register(data: RegisterRequest):
                 value=session_token,
                 httponly=True,
                 secure=COOKIE_SECURE,
-                samesite="lax",
+                samesite=COOKIE_SAMESITE,
                 max_age=86400
             )
             return response
@@ -433,7 +443,7 @@ def authenticate_user(email: str, password: str):
             value=session_token,
             httponly=True,
             secure=COOKIE_SECURE,
-            samesite="lax",
+            samesite=COOKIE_SAMESITE,
             max_age=86400
         )
         return response
@@ -450,7 +460,7 @@ def logout():
         path="/",
         httponly=True,
         secure=COOKIE_SECURE,
-        samesite="lax"
+        samesite=COOKIE_SAMESITE
     )
     return response
 

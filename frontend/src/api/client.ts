@@ -1,7 +1,14 @@
 import axios from "axios"
 
+const DEFAULT_API_BASE_URL = "http://localhost:8000"
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  DEFAULT_API_BASE_URL
+).replace(/\/+$/, "")
+
 const client = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: API_BASE_URL,
   withCredentials: true,  // Send cookies with requests
 })
 

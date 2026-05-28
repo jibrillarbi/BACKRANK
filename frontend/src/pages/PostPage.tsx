@@ -1,59 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
-import { api } from '../api/index';
+import { api, type PostDetail } from '../api/index';
 import { getCurrentUser } from '../api/useAuth';
-
-interface Post {
-  id: string;
-  author_uid?: string;
-  author: string;
-  timestamp: string;
-  strategyTitle: string;
-  asset: string;
-  timeframe: string;
-  returnPct: number;
-  score?: number | null;
-  votes: number;
-  comments: number;
-  body: string;
-  commentsList: Comment[];
-  deployment: {
-    id: string;
-    asset: string;
-    timeframe: string;
-    direction: string;
-    sizing: string | number;
-    sl: string | number | null;
-    tp: string | number | null;
-    score?: number | null;
-  };
-  strategy: {
-    name: string;
-    entry_rule: string;
-    exit_rule: string;
-  };
-  backtest: {
-    total_return_pct: number;
-    sharpe_ratio: number;
-    max_dd: number;
-    win_rate: number;
-    total_trades: number;
-    final_capital: number;
-  };
-}
-
-interface Comment {
-  id: string;
-  author: string;
-  body: string;
-  createdAt: string;
-}
 
 export default function PostPage() {
   const { postId } = useParams();
   const navigate = useNavigate();
-  const [post, setPost] = useState<Post | null>(null);
+  const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -161,27 +115,15 @@ export default function PostPage() {
 
     setSavingStrategy(true);
     try {
-      const response = await fetch('http://localhost:8000/create_strategy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: strategyName,
-          entry_rule: post.strategy.entry_rule,
-          exit_rule: post.strategy.exit_rule
-        })
+      const result = await api.saveStrategy({
+        name: strategyName,
+        entry_rule: post.strategy.entry_rule,
+        exit_rule: post.strategy.exit_rule,
+        is_published: false,
       });
-
-      const result = await response.json();
       console.log('Save strategy response:', result);
 
-      if (!response.ok) {
-        throw new Error(result.detail || 'Failed to save strategy');
-      }
-
-      if (result.duplicate) {
+      if (result.duplicate && result.strategy) {
         alert(`This strategy already exists as "${result.strategy.name}"`);
       } else if (result.success) {
         alert(`✓ Strategy "${strategyName}" saved to your profile!`);
@@ -225,10 +167,9 @@ export default function PostPage() {
         }
 
         // Fetch from dedicated post endpoint
-        const response = await fetch(`http://localhost:8000/post/${postId}`);
-        const data = await response.json();
+        const data = await api.getPost(postId);
 
-        if (data.error) {
+        if ('error' in data) {
           setError(data.error);
         } else {
           setPost(data);
@@ -236,10 +177,7 @@ export default function PostPage() {
           // Check if user has already liked this post
           if (currentUser) {
             try {
-              const likeResponse = await fetch(`http://localhost:8000/post/${postId}/liked`, {
-                credentials: 'include'
-              });
-              const likeData = await likeResponse.json();
+              const likeData = await api.checkPostLiked(postId);
               setIsLiked(likeData.liked || false);
             } catch (err) {
               console.error('Failed to check like status:', err);
